@@ -5,8 +5,9 @@ const images = [
   { img: 'images/guess_2.jpg', x: 556, y: 1298 },
   { img: 'images/guess_3.jpg', x: 664, y: 1271 },
   { img: 'images/guess_4.jpg', x: 1252, y: 1184 },
-  { img: 'images/guess_5.jpg', x: 1352, y: 930 },
+  { img: 'images/guess_5.jpg', x: 1365, y: 735 },
   { img: 'images/guess_6.jpg', x: 855, y: 284 },
+  { img: 'images/guess_2.jpg', x: 122, y: 156 },
 ];
 const clueImage = document.getElementById('clue-image');
 const map = document.getElementById('map');
@@ -26,7 +27,47 @@ let currentImageIndex = 0;
 let guess = null;
 let score = 0;
 let canGuess = true;
-let lastImages = [];
+let remainingImages = [];
+let totalImages = images.length;
+let guessedCount = 0;
+let gameFinished = false;
+let distanceStats = { under25: 0, under50: 0, under100: 0, fail: 0 };
+
+function updateProgress() {
+  // Mueve el progreso arriba de la imagen a adivinar
+  let progress = document.getElementById('progress-text');
+  if (!progress) {
+    progress = document.createElement('div');
+    progress.id = 'progress-text';
+    progress.style = 'font-size:1.1rem;font-weight:bold;margin:8px 0 4px 0;color:#ffd166;text-align:center;';
+    // Insertar justo antes de la imagen a adivinar
+    const clueImg = document.getElementById('clue-image');
+    clueImg.parentNode.insertBefore(progress, clueImg);
+  }
+  progress.textContent = `(${guessedCount}/${totalImages})`;
+}
+
+function startGame() {
+  score = 0;
+  guessedCount = 0;
+  canGuess = true;
+  gameFinished = false;
+  remainingImages = images.map((_, i) => i);
+  distanceStats = { under25: 0, under50: 0, under100: 0, fail: 0 };
+  updateProgress();
+  clueImage.style.display = '';
+  scoreDiv.textContent = `${texts[lang].score}: ${score}`;
+  scoreDiv.innerHTML += `<div id='score-details' class='score-details'></div>`;
+  loadImage();
+}
+
+function getRandomImageIndexNoRepeat() {
+  if (remainingImages.length === 0) return null;
+  const idx = Math.floor(Math.random() * remainingImages.length);
+  const imageIdx = remainingImages[idx];
+  remainingImages.splice(idx, 1);
+  return imageIdx;
+}
 
 function updateOverlaySize() {
   // Ajusta el overlay al tamaño y posición del mapa
@@ -37,7 +78,11 @@ function updateOverlaySize() {
   markerOverlay.style.top = map.offsetTop + 'px';
 }
 window.addEventListener('resize', updateOverlaySize);
-window.addEventListener('DOMContentLoaded', updateOverlaySize);
+window.addEventListener('DOMContentLoaded', () => {
+  // Ya no insertes el progreso arriba del título
+  startGame();
+  updateOverlaySize();
+});
 
 map.addEventListener('click', e => {
   if (!canGuess) return;
@@ -97,6 +142,28 @@ function setLanguage(l) {
   document.getElementById('support-message').innerHTML = texts[lang].support;
   if (submitBtn.textContent === texts['es'].send || submitBtn.textContent === texts['en'].send) {
     submitBtn.textContent = texts[lang].send;
+  } else if (gameFinished) {
+    submitBtn.textContent = lang === 'es' ? 'Reiniciar' : 'Restart';
+    // Volver a mostrar el resumen final en el idioma correcto
+    let resumen = `<div id='score-details' class='score-details' style='text-align:center;'>`;
+    if (lang === 'es') {
+      resumen += `Tu puntuación final es: <strong style='color:#fff;font-size:1.7rem;'>${score}</strong></div>`;
+      resumen += `<div class='distance-summary' style='margin:12px auto 0 auto;text-align:center;display:inline-block;font-size:1.1rem;color:#ffd166;'>`;
+      resumen += `Ubicaciones acertadas a menos de 25 metros: <strong style='color:rgba(60,200,60,0.85);'>${distanceStats.under25}</strong><br>`;
+      resumen += `Ubicaciones acertadas a menos de 50 metros: <strong style='color:rgba(255,220,50,0.85);'>${distanceStats.under50}</strong></span><br>`;
+      resumen += `Ubicaciones acertadas a menos de 100 metros: <strong style='color:rgba(255,140,0,0.85);'>${distanceStats.under100}</strong></span><br>`;
+      resumen += `Ubicaciones no acertadas: <strong style='color:rgba(220,40,40,0.85);'>${distanceStats.fail}</strong></span>`;
+      resumen += `</div>`;
+    } else {
+      resumen += `Your final score is: <strong style='color:#fff;font-size:1.7rem;'>${score}</strong></div>`;
+      resumen += `<div class='distance-summary' style='margin:12px auto 0 auto;text-align:center;display:inline-block;font-size:1.1rem;color:#ffd166;'>`;
+      resumen += `Locations guessed under 25 meters: <strong style='color:rgba(60,200,60,0.85);'>${distanceStats.under25}</strong><br>`;
+      resumen += `Locations guessed under 50 meters: <strong style='color:rgba(255,220,50,0.85);'>${distanceStats.under50}</strong><br>`;
+      resumen += `Locations guessed under 100 meters: <strong style='color:rgba(255,140,0,0.85);'>${distanceStats.under100}</strong><br>`;
+      resumen += `Locations not guessed: <strong style='color:rgba(220,40,40,0.85);'>${distanceStats.fail}</strong>`;
+      resumen += `</div>`;
+    }
+    scoreDiv.innerHTML = resumen;
   } else {
     submitBtn.textContent = texts[lang].next;
   }
@@ -119,10 +186,39 @@ function getRandomImageIndex() {
 }
 
 function loadImage() {
-  // Elegir aleatoriamente una imagen que no haya salido en los últimos 3 ciclos
-  currentImageIndex = getRandomImageIndex();
+  if (remainingImages.length === 0) {
+    gameFinished = true;
+    clearMarkers();
+    resultDiv.innerHTML = '';
+    // Mostrar solo la puntuación final, ocultar el label de puntuación
+    let resumen = `<div id='score-details' class='score-details' style='text-align:center;'>`;
+    if (lang === 'es') {
+      resumen += `Tu puntuación final es: <strong style='color:#fff;font-size:1.7rem;'>${score}</strong></div>`;
+      resumen += `<div class='distance-summary' style='margin:12px auto 0 auto;text-align:center;display:inline-block;font-size:1.1rem;color:#ffd166;'>`;
+      resumen += `Ubicaciones acertadas a menos de 25 metros: <strong style='color:rgba(60,200,60,0.85);'>${distanceStats.under25}</strong></span><br>`;
+      resumen += `Ubicaciones acertadas a menos de 50 metros: <strong style='color:rgba(255,220,50,0.85);'>${distanceStats.under50}</strong></span><br>`;
+      resumen += `Ubicaciones acertadas a menos de 100 metros: <strong style='color:rgba(255,140,0,0.85);'>${distanceStats.under100}</strong></span><br>`;
+      resumen += `Ubicaciones no acertadas: <strong style='color:rgba(220,40,40,0.85);'>${distanceStats.fail}</strong></span>`;
+      resumen += `</div>`;
+    } else {
+      resumen += `Your final score is: <strong style='color:#fff;font-size:1.7rem;'>${score}</strong></div>`;
+      resumen += `<div class='distance-summary' style='margin:12px auto 0 auto;text-align:center;display:inline-block;font-size:1.1rem;color:#ffd166;'>`;
+      resumen += `Locations guessed under 25 meters: <strong style='color:rgba(60,200,60,0.85);'>${distanceStats.under25}</strong><br>`;
+      resumen += `Locations guessed under 50 meters: <strong style='color:rgba(255,220,50,0.85);'>${distanceStats.under50}</strong><br>`;
+      resumen += `Locations guessed under 100 meters: <strong style='color:rgba(255,140,0,0.85);'>${distanceStats.under100}</strong><br>`;
+      resumen += `Locations not guessed: <strong style='color:rgba(220,40,40,0.85);'>${distanceStats.fail}</strong>`;
+      resumen += `</div>`;
+    }
+    scoreDiv.innerHTML = resumen;
+    submitBtn.textContent = lang === 'es' ? 'Reiniciar' : 'Restart';
+    submitBtn.disabled = false;
+    updateProgress();
+    return;
+  }
+  currentImageIndex = getRandomImageIndexNoRepeat();
   const { img } = images[currentImageIndex];
   clueImage.removeAttribute('style');
+  clueImage.style.display = '';
   clueImage.src = img;
   clueImage.onerror = function() {
     clueImage.style.display = 'none';
@@ -132,15 +228,21 @@ function loadImage() {
   guess = null;
   clearMarkers();
   resultDiv.textContent = '';
+  scoreDiv.textContent = `${texts[lang].score}: ${score}`;
+  scoreDiv.innerHTML += `<div id='score-details' class='score-details'></div>`;
   submitBtn.textContent = texts[lang].send;
   submitBtn.disabled = false;
   canGuess = true;
-  scoreDiv.textContent = `${texts[lang].score}: ${score}`;
-  scoreDiv.innerHTML += `<div id='score-details' class='score-details'></div>`;
+  updateProgress();
 }
 
 submitBtn.addEventListener('click', () => {
+  if (gameFinished) {
+    startGame();
+    return;
+  }
   if (submitBtn.textContent === texts[lang].next) {
+    guessedCount++;
     loadImage();
     canGuess = true;
     return;
@@ -155,6 +257,11 @@ submitBtn.addEventListener('click', () => {
   const dist = calculateDistance(guess.x, guess.y, real.x, real.y);
   const points = calculatePoints(dist);
   score += points;
+  // Contador de distancias
+  if (dist < 25) distanceStats.under25++;
+  else if (dist < 50) distanceStats.under50++;
+  else if (dist < 100) distanceStats.under100++;
+  else distanceStats.fail++;
   scoreDiv.textContent = `${texts[lang].score}: ${score}`;
   scoreDiv.innerHTML += `<div id='score-details' class='score-details'>${texts[lang].distance}: <span style='color:#ffd166'>${Math.round(dist)} metros</span><br>${texts[lang].points}: <strong style='color:#fff;font-size:1.7rem;'>${points}</strong></div>`;
   resultDiv.innerHTML = '';
