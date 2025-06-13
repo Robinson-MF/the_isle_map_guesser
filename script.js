@@ -7,7 +7,10 @@ const images = [
   { img: 'images/guess_4.jpg', x: 1252, y: 1184 },
   { img: 'images/guess_5.jpg', x: 1365, y: 735 },
   { img: 'images/guess_6.jpg', x: 855, y: 284 },
-  { img: 'images/guess_2.jpg', x: 122, y: 156 },
+  { img: 'images/guess_7.jpg', x: 1141, y: 658 },
+  { img: 'images/guess_8.jpg', x: 1773, y: 676 },
+  { img: 'images/guess_9.jpg', x: 1047, y: 1083 },
+  { img: 'images/guess_10.jpg', x: 432, y: 790 }
 ];
 const clueImage = document.getElementById('clue-image');
 const map = document.getElementById('map');
@@ -32,32 +35,84 @@ let totalImages = images.length;
 let guessedCount = 0;
 let gameFinished = false;
 let distanceStats = { under25: 0, under50: 0, under100: 0, fail: 0 };
+let preGame = true; // Nueva bandera para la fase de "Comenzar"
 
 function updateProgress() {
-  // Mueve el progreso arriba de la imagen a adivinar
   let progress = document.getElementById('progress-text');
+  let timerDiv = document.getElementById('timer-div');
   if (!progress) {
-    progress = document.createElement('div');
+    progress = document.createElement('span'); // Cambiar a span para inline
     progress.id = 'progress-text';
-    progress.style = 'font-size:1.1rem;font-weight:bold;margin:8px 0 4px 0;color:#ffd166;text-align:center;';
-    // Insertar justo antes de la imagen a adivinar
+    progress.style = 'font-size:1.1rem;font-weight:bold;margin:8px 0 4px 0;color:#ffd166;text-align:center;display:inline-block;vertical-align:middle;';
     const clueImg = document.getElementById('clue-image');
     clueImg.parentNode.insertBefore(progress, clueImg);
   }
-  progress.textContent = `(${guessedCount}/${totalImages})`;
+  // Crear contenedor inline-flex para alinear contador y temporizador
+  let progressTimerWrap = document.getElementById('progress-timer-wrap');
+  if (!progressTimerWrap) {
+    progressTimerWrap = document.createElement('div');
+    progressTimerWrap.id = 'progress-timer-wrap';
+    progressTimerWrap.style = 'display:inline-flex;align-items:center;justify-content:center;width:100%;margin-bottom:4px;';
+    progress.parentNode.insertBefore(progressTimerWrap, progress);
+    progressTimerWrap.appendChild(progress);
+  } else if (progress.parentNode !== progressTimerWrap) {
+    progressTimerWrap.appendChild(progress);
+  }
+  if (timerDiv) {
+    timerDiv.style.display = preGame ? 'none' : 'inline-block';
+    timerDiv.style.marginLeft = '16px';
+    timerDiv.style.marginTop = '0';
+    timerDiv.style.verticalAlign = 'middle';
+    if (timerDiv.parentNode !== progressTimerWrap) {
+      progressTimerWrap.appendChild(timerDiv);
+    }
+  }
+  if (preGame) {
+    progress.textContent = lang === 'es'
+      ? 'Selecciona el modo de juego que prefieras y luego presiona Comenzar para iniciar.'
+      : 'Choose your preferred game mode and then press Start to begin.';
+  } else {
+    progress.textContent = `(${guessedCount}/${totalImages})`;
+  }
+}
+
+function setPreGameState() {
+  preGame = true;
+  canGuess = false;
+  gameFinished = false;
+  guessedCount = 0;
+  score = 0;
+  distanceStats = { under25: 0, under50: 0, under100: 0, fail: 0 };
+  clueImage.style.display = 'none';
+  clearMarkers();
+  resultDiv.textContent = '';
+  scoreDiv.textContent = '';
+  updateProgress();
+  modeSelector.disabled = false;
+  submitBtn.textContent = lang === 'es' ? 'Comenzar' : 'Start';
+  submitBtn.style.background = '#ffd166';
+  submitBtn.style.color = '#222';
+  submitBtn.disabled = false;
 }
 
 function startGame() {
+  preGame = false;
   score = 0;
   guessedCount = 0;
   canGuess = true;
   gameFinished = false;
   remainingImages = images.map((_, i) => i);
   distanceStats = { under25: 0, under50: 0, under100: 0, fail: 0 };
+  if (timerInterval) clearInterval(timerInterval);
+  hideTimer();
+  hideLives();
   updateProgress();
   clueImage.style.display = '';
   scoreDiv.textContent = `${texts[lang].score}: ${score}`;
   scoreDiv.innerHTML += `<div id='score-details' class='score-details'></div>`;
+  modeSelector.disabled = true;
+  submitBtn.style.background = '#21c97a'; // Verde
+  submitBtn.style.color = '#fff';
   loadImage();
 }
 
@@ -80,7 +135,7 @@ function updateOverlaySize() {
 window.addEventListener('resize', updateOverlaySize);
 window.addEventListener('DOMContentLoaded', () => {
   // Ya no insertes el progreso arriba del título
-  startGame();
+  setPreGameState();
   updateOverlaySize();
 });
 
@@ -112,7 +167,7 @@ const texts = {
     distance: 'Distancia',
     points: 'Puntos obtenidos',
     alert: 'Haz clic en el mapa para adivinar primero.',
-    support: 'Para poder mantener el juego activo, por favor apoya al proyecto en <a href="https://paypal.me/RobinsonFredes" target="_blank" style="color:#7fffa6;text-decoration:underline;font-weight:bold;">PayPal</a> o <a href="https://ko-fi.com/robinsonfredes" target="_blank" style="color:#ffd166;text-decoration:underline;font-weight:bold;">Ko-fi</a>.'
+    support: 'Si te gusta el juego, por favor considera apoyar el proyecto en <a href="https://paypal.me/RobinsonFredes" target="_blank" style="color:#7fffa6;text-decoration:underline;font-weight:bold;">PayPal</a> o <a href="https://ko-fi.com/robinsonfredes" target="_blank" style="color:#ffd166;text-decoration:underline;font-weight:bold;">Ko-fi</a>.'
   },
   en: {
     title: 'Where is this place?',
@@ -136,38 +191,85 @@ function setLanguage(l) {
   document.getElementById('desc1-text').textContent = texts[lang].desc1;
   document.getElementById('desc2-text').className = 'desc-text';
   document.getElementById('desc2-text').textContent = texts[lang].desc2;
-  scoreDiv.textContent = `${texts[lang].score}: ${score}`;
-  scoreDiv.innerHTML += `<div id='score-details' class='score-details'></div>`;
   document.getElementById('support-message').className = 'support-message';
   document.getElementById('support-message').innerHTML = texts[lang].support;
-  if (submitBtn.textContent === texts['es'].send || submitBtn.textContent === texts['en'].send) {
+  modeLabel.textContent = lang === 'es' ? 'Modo' : 'Mode';
+  modeSelector.innerHTML = getModeOptions(lang);
+  modeSelector.value = gameMode;
+  // Actualizar botón y progreso según fase
+  if (preGame) {
+    submitBtn.textContent = lang === 'es' ? 'Comenzar' : 'Start';
+    submitBtn.style.background = '#ffd166';
+    submitBtn.style.color = '#222';
+    scoreDiv.textContent = '';
+    scoreDiv.style.display = gameMode === 'lives' ? 'none' : '';
+    hideLives();
+    updateProgress();
+    if (gameMode === 'lives') showLives();
+    resultDiv.innerHTML = '';
+  } else if (submitBtn.textContent === texts['es'].send || submitBtn.textContent === texts['en'].send) {
     submitBtn.textContent = texts[lang].send;
+    submitBtn.style.background = '';
+    submitBtn.style.color = '';
+    scoreDiv.textContent = `${texts[lang].score}: ${score}`;
+    scoreDiv.innerHTML += `<div id='score-details' class='score-details'></div>`;
+    scoreDiv.style.display = gameMode === 'lives' ? 'none' : '';
+    hideLives();
+    if (gameMode === 'lives') showLives();
+    resultDiv.innerHTML = '';
   } else if (gameFinished) {
     submitBtn.textContent = lang === 'es' ? 'Reiniciar' : 'Restart';
-    // Volver a mostrar el resumen final en el idioma correcto
-    let resumen = `<div id='score-details' class='score-details' style='text-align:center;'>`;
-    if (lang === 'es') {
-      resumen += `Tu puntuación final es: <strong style='color:#fff;font-size:1.7rem;'>${score}</strong></div>`;
-      resumen += `<div class='distance-summary' style='margin:12px auto 0 auto;text-align:center;display:inline-block;font-size:1.1rem;color:#ffd166;'>`;
-      resumen += `Ubicaciones acertadas a menos de 25 metros: <strong style='color:rgba(60,200,60,0.85);'>${distanceStats.under25}</strong><br>`;
-      resumen += `Ubicaciones acertadas a menos de 50 metros: <strong style='color:rgba(255,220,50,0.85);'>${distanceStats.under50}</strong></span><br>`;
-      resumen += `Ubicaciones acertadas a menos de 100 metros: <strong style='color:rgba(255,140,0,0.85);'>${distanceStats.under100}</strong></span><br>`;
-      resumen += `Ubicaciones no acertadas: <strong style='color:rgba(220,40,40,0.85);'>${distanceStats.fail}</strong></span>`;
-      resumen += `</div>`;
+    submitBtn.style.background = '#ffd166'; // Amarillo como 'Comenzar'
+    submitBtn.style.color = '#222';
+    if (gameMode === 'lives') {
+      resultDiv.innerHTML = `<span style='font-size:2.2rem;color:${lives > 0 ? '#7fffa6' : '#ff4d4d'};font-weight:bold;display:block;margin:32px 0 24px 0;text-align:center;'>${lang === 'es' ? (lives > 0 ? '¡Ganaste!' : 'Perdiste') : (lives > 0 ? 'You won!' : 'You lost')}</span>`;
+      // Mostrar corazones debajo del mensaje final
+      let livesDiv = document.getElementById('lives-div');
+      if (!livesDiv) {
+        livesDiv = document.createElement('div');
+        livesDiv.id = 'lives-div';
+        livesDiv.style = 'font-size:1.6rem;font-weight:bold;margin:16px 0 16px 0;color:#ffd166;text-align:center;transition:all 0.2s;letter-spacing:0.5px;';
+        resultDiv.appendChild(livesDiv);
+      }
+      let hearts = '❤️'.repeat(lives) + '🖤'.repeat(3 - lives);
+      let label = lang === 'es' ? (lives === 1 ? 'vida' : 'vidas') : (lives === 1 ? 'life' : 'lives');
+      livesDiv.textContent = `${lives} ${label}: ${hearts}`;
+      livesDiv.style.display = 'block';
+      scoreDiv.style.display = 'none';
     } else {
-      resumen += `Your final score is: <strong style='color:#fff;font-size:1.7rem;'>${score}</strong></div>`;
-      resumen += `<div class='distance-summary' style='margin:12px auto 0 auto;text-align:center;display:inline-block;font-size:1.1rem;color:#ffd166;'>`;
-      resumen += `Locations guessed under 25 meters: <strong style='color:rgba(60,200,60,0.85);'>${distanceStats.under25}</strong><br>`;
-      resumen += `Locations guessed under 50 meters: <strong style='color:rgba(255,220,50,0.85);'>${distanceStats.under50}</strong><br>`;
-      resumen += `Locations guessed under 100 meters: <strong style='color:rgba(255,140,0,0.85);'>${distanceStats.under100}</strong><br>`;
-      resumen += `Locations not guessed: <strong style='color:rgba(220,40,40,0.85);'>${distanceStats.fail}</strong>`;
-      resumen += `</div>`;
+      let resumen = `<div id='score-details' class='score-details' style='text-align:center;'>`;
+      if (lang === 'es') {
+        resumen += `Tu puntuación final es: <strong style='color:#fff;font-size:1.7rem;'>${score}</strong></div>`;
+        resumen += `<div class='distance-summary' style='margin:12px auto 0 auto;text-align:center;display:inline-block;font-size:1.1rem;color:#ffd166;'>`;
+        resumen += `Ubicaciones acertadas a menos de 25 metros: <strong style='color:rgba(60,200,60,0.85);'>${distanceStats.under25}</strong></span><br>`;
+        resumen += `Ubicaciones acertadas a menos de 50 metros: <strong style='color:rgba(255,220,50,0.85);'>${distanceStats.under50}</strong></span><br>`;
+        resumen += `Ubicaciones acertadas a menos de 100 metros: <strong style='color:rgba(255,140,0,0.85);'>${distanceStats.under100}</strong></span><br>`;
+        resumen += `Ubicaciones no acertadas: <strong style='color:rgba(220,40,40,0.85);'>${distanceStats.fail}</strong></span>`;
+        resumen += `</div>`;
+      } else {
+        resumen += `Your final score is: <strong style='color:#fff;font-size:1.7rem;'>${score}</strong></div>`;
+        resumen += `<div class='distance-summary' style='margin:12px auto 0 auto;text-align:center;display:inline-block;font-size:1.1rem;color:#ffd166;'>`;
+        resumen += `Locations guessed under 25 meters: <strong style='color:rgba(60,200,60,0.85);'>${distanceStats.under25}</strong><br>`;
+        resumen += `Locations guessed under 50 meters: <strong style='color:rgba(255,220,50,0.85);'>${distanceStats.under50}</strong><br>`;
+        resumen += `Locations guessed under 100 meters: <strong style='color:rgba(255,140,0,0.85);'>${distanceStats.under100}</strong><br>`;
+        resumen += `Locations not guessed: <strong style='color:rgba(220,40,40,0.85);'>${distanceStats.fail}</strong>`;
+        resumen += `</div>`;
+      }
+      scoreDiv.innerHTML = resumen;
+      scoreDiv.style.display = '';
     }
-    scoreDiv.innerHTML = resumen;
+    hideLives();
   } else {
     submitBtn.textContent = texts[lang].next;
+    submitBtn.style.background = '';
+    submitBtn.style.color = '';
+    scoreDiv.textContent = `${texts[lang].score}: ${score}`;
+    scoreDiv.innerHTML += `<div id='score-details' class='score-details'></div>`;
+    scoreDiv.style.display = gameMode === 'lives' ? 'none' : '';
+    hideLives();
+    if (gameMode === 'lives') showLives();
+    resultDiv.innerHTML = '';
   }
-  // No mostrar resultado en resultDiv, solo en score-details
 }
 document.getElementById('lang-es').onclick = () => setLanguage('es');
 document.getElementById('lang-en').onclick = () => setLanguage('en');
@@ -185,33 +287,179 @@ function getRandomImageIndex() {
   return idx;
 }
 
+// Agregar texto "modo" o "mode" y mejorar visibilidad del menú
+const langEs = document.getElementById('lang-es');
+const langEn = document.getElementById('lang-en');
+const langContainer = langEs.parentNode;
+
+let modeLabel = document.createElement('span');
+modeLabel.id = 'mode-label';
+modeLabel.style = `
+  margin-left: 18px;
+  margin-right: 7px;
+  font-size: 1.08rem;
+  font-weight: bold;
+  color: #ffd166;
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 8px #000b, 0 1px 0 #fff1;
+  vertical-align: middle;
+`;
+modeLabel.textContent = 'Modo';
+langContainer.appendChild(modeLabel);
+
+const modeSelector = document.createElement('select');
+modeSelector.id = 'mode-selector';
+modeSelector.style = `
+  padding: 9px 28px 9px 14px;
+  border-radius: 10px;
+  border: 2.5px solid #ffd166;
+  background: #181b22;
+  color: #ffd166;
+  font-size: 1.08rem;
+  font-weight: 700;
+  box-shadow: 0 4px 16px 0 #000b, 0 1px 0 #fff1;
+  outline: none;
+  appearance: none;
+  cursor: pointer;
+  transition: border 0.2s, box-shadow 0.2s, background 0.2s;
+  margin-left: 0;
+  margin-right: 0;
+  vertical-align: middle;
+`;
+modeSelector.className = 'modern-dropdown';
+
+function getModeOptions(lang) {
+  if (lang === 'es') {
+    return `
+      <option value="standard" style='color:#ffd166;background:#181b22;'>Estándar</option>
+      <option value="timer" style='color:#ffd166;background:#181b22;'>Contrarreloj</option>
+      <option value="lives" style='color:#ffd166;background:#181b22;'>Intentos limitados</option>
+    `;
+  } else {
+    return `
+      <option value="standard" style='color:#ffd166;background:#181b22;'>Standard</option>
+      <option value="timer" style='color:#ffd166;background:#181b22;'>Timed</option>
+      <option value="lives" style='color:#ffd166;background:#181b22;'>Limited lives</option>
+    `;
+  }
+}
+modeSelector.innerHTML = getModeOptions('es');
+langContainer.appendChild(modeSelector);
+
+let gameMode = 'standard';
+let timerInterval = null;
+let timeLeft = 10;
+let lives = 3;
+
+modeSelector.addEventListener('change', function() {
+  // Permitir cambiar el modo si está en preGame o si el juego ya terminó
+  if (!preGame && !gameFinished) {
+    modeSelector.value = gameMode;
+    return;
+  }
+  gameMode = this.value;
+  // Si el juego ya terminó, actualizar la UI inmediatamente
+  if (gameFinished) {
+    setLanguage(lang); // Refresca textos y resumen en el idioma y modo correcto
+  }
+});
+
+function showTimer() {
+  let timerDiv = document.getElementById('timer-div');
+  if (!timerDiv) {
+    timerDiv = document.createElement('div');
+    timerDiv.id = 'timer-div';
+    timerDiv.style = 'font-size:1.2rem;font-weight:bold;margin:8px 0;color:#ffd166;text-align:center;';
+    // Insertar el temporizador justo antes del progreso, arriba de la imagen
+    const progress = document.getElementById('progress-text');
+    if (progress && progress.parentNode) {
+      progress.parentNode.insertBefore(timerDiv, progress.nextSibling);
+    } else {
+      // Fallback: después de clueImage
+      clueImage.parentNode.insertBefore(timerDiv, clueImage.nextSibling);
+    }
+  }
+  timerDiv.textContent = `⏰ ${timeLeft}s`;
+}
+function hideTimer() {
+  const timerDiv = document.getElementById('timer-div');
+  if (timerDiv) timerDiv.remove();
+}
+function showLives() {
+  let livesDiv = document.getElementById('lives-div');
+  if (!livesDiv) {
+    livesDiv = document.createElement('div');
+    livesDiv.id = 'lives-div';
+    // Más grande y centrado, reemplaza el área de puntuación
+    livesDiv.style = 'font-size:1.6rem;font-weight:bold;margin:16px 0 16px 0;color:#ffd166;text-align:center;transition:all 0.2s;letter-spacing:0.5px;';
+    // Insertar en el mismo lugar que la puntuación
+    scoreDiv.parentNode.insertBefore(livesDiv, scoreDiv);
+  }
+  let hearts = '❤️'.repeat(lives) + '🖤'.repeat(3 - lives);
+  let label = lang === 'es' ? (lives === 1 ? 'vida' : 'vidas') : (lives === 1 ? 'life' : 'lives');
+  livesDiv.textContent = `${lives} ${label}: ${hearts}`;
+  livesDiv.style.display = 'block';
+  // Ocultar puntuación si está en modo vidas
+  if (gameMode === 'lives') scoreDiv.style.display = 'none';
+}
+function hideLives() {
+  const livesDiv = document.getElementById('lives-div');
+  if (livesDiv) livesDiv.remove();
+  scoreDiv.style.display = '';
+}
+
+// Modificar loadImage para modos
 function loadImage() {
-  if (remainingImages.length === 0) {
+  if (timerInterval) clearInterval(timerInterval);
+  hideTimer();
+  hideLives();
+  if (remainingImages.length === 0 || (gameMode === 'lives' && lives <= 0)) {
     gameFinished = true;
     clearMarkers();
-    resultDiv.innerHTML = '';
-    // Mostrar solo la puntuación final, ocultar el label de puntuación
-    let resumen = `<div id='score-details' class='score-details' style='text-align:center;'>`;
-    if (lang === 'es') {
-      resumen += `Tu puntuación final es: <strong style='color:#fff;font-size:1.7rem;'>${score}</strong></div>`;
-      resumen += `<div class='distance-summary' style='margin:12px auto 0 auto;text-align:center;display:inline-block;font-size:1.1rem;color:#ffd166;'>`;
-      resumen += `Ubicaciones acertadas a menos de 25 metros: <strong style='color:rgba(60,200,60,0.85);'>${distanceStats.under25}</strong></span><br>`;
-      resumen += `Ubicaciones acertadas a menos de 50 metros: <strong style='color:rgba(255,220,50,0.85);'>${distanceStats.under50}</strong></span><br>`;
-      resumen += `Ubicaciones acertadas a menos de 100 metros: <strong style='color:rgba(255,140,0,0.85);'>${distanceStats.under100}</strong></span><br>`;
-      resumen += `Ubicaciones no acertadas: <strong style='color:rgba(220,40,40,0.85);'>${distanceStats.fail}</strong></span>`;
-      resumen += `</div>`;
+    // Mostrar mensaje de condición centrado en resultDiv en modo vidas
+    if (gameMode === 'lives') {
+      resultDiv.innerHTML = `<span style='font-size:2.2rem;color:${lives > 0 ? '#7fffa6' : '#ff4d4d'};font-weight:bold;display:block;margin:32px 0 24px 0;text-align:center;'>${lang === 'es' ? (lives > 0 ? '¡Ganaste!' : 'Perdiste') : (lives > 0 ? 'You won!' : 'You lost')}</span>`;
+      // Mostrar corazones debajo del mensaje final
+      let livesDiv = document.getElementById('lives-div');
+      if (!livesDiv) {
+        livesDiv = document.createElement('div');
+        livesDiv.id = 'lives-div';
+        livesDiv.style = 'font-size:1.6rem;font-weight:bold;margin:16px 0 16px 0;color:#ffd166;text-align:center;transition:all 0.2s;letter-spacing:0.5px;';
+        resultDiv.appendChild(livesDiv);
+      }
+      let hearts = '❤️'.repeat(lives) + '🖤'.repeat(3 - lives);
+      let label = lang === 'es' ? (lives === 1 ? 'vida' : 'vidas') : (lives === 1 ? 'life' : 'lives');
+      livesDiv.textContent = `${lives} ${label}: ${hearts}`;
+      livesDiv.style.display = 'block';
+      // Ocultar puntuación
+      scoreDiv.style.display = 'none';
     } else {
-      resumen += `Your final score is: <strong style='color:#fff;font-size:1.7rem;'>${score}</strong></div>`;
-      resumen += `<div class='distance-summary' style='margin:12px auto 0 auto;text-align:center;display:inline-block;font-size:1.1rem;color:#ffd166;'>`;
-      resumen += `Locations guessed under 25 meters: <strong style='color:rgba(60,200,60,0.85);'>${distanceStats.under25}</strong><br>`;
-      resumen += `Locations guessed under 50 meters: <strong style='color:rgba(255,220,50,0.85);'>${distanceStats.under50}</strong><br>`;
-      resumen += `Locations guessed under 100 meters: <strong style='color:rgba(255,140,0,0.85);'>${distanceStats.under100}</strong><br>`;
-      resumen += `Locations not guessed: <strong style='color:rgba(220,40,40,0.85);'>${distanceStats.fail}</strong>`;
-      resumen += `</div>`;
+      let resumen = `<div id='score-details' class='score-details' style='text-align:center;'>`;
+      if (lang === 'es') {
+        resumen += `Tu puntuación final es: <strong style='color:#fff;font-size:1.7rem;'>${score}</strong></div>`;
+        resumen += `<div class='distance-summary' style='margin:12px auto 0 auto;text-align:center;display:inline-block;font-size:1.1rem;color:#ffd166;'>`;
+        resumen += `Ubicaciones acertadas a menos de 25 metros: <strong style='color:rgba(60,200,60,0.85);'>${distanceStats.under25}</strong></span><br>`;
+        resumen += `Ubicaciones acertadas a menos de 50 metros: <strong style='color:rgba(255,220,50,0.85);'>${distanceStats.under50}</strong></span><br>`;
+        resumen += `Ubicaciones acertadas a menos de 100 metros: <strong style='color:rgba(255,140,0,0.85);'>${distanceStats.under100}</strong></span><br>`;
+        resumen += `Ubicaciones no acertadas: <strong style='color:rgba(220,40,40,0.85);'>${distanceStats.fail}</strong></span>`;
+        resumen += `</div>`;
+      } else {
+        resumen += `Your final score is: <strong style='color:#fff;font-size:1.7rem;'>${score}</strong></div>`;
+        resumen += `<div class='distance-summary' style='margin:12px auto 0 auto;text-align:center;display:inline-block;font-size:1.1rem;color:#ffd166;'>`;
+        resumen += `Locations guessed under 25 meters: <strong style='color:rgba(60,200,60,0.85);'>${distanceStats.under25}</strong><br>`;
+        resumen += `Locations guessed under 50 meters: <strong style='color:rgba(255,220,50,0.85);'>${distanceStats.under50}</strong><br>`;
+        resumen += `Locations guessed under 100 meters: <strong style='color:rgba(255,140,0,0.85);'>${distanceStats.under100}</strong><br>`;
+        resumen += `Locations not guessed: <strong style='color:rgba(220,40,40,0.85);'>${distanceStats.fail}</strong>`;
+        resumen += `</div>`;
+      }
+      scoreDiv.innerHTML = resumen;
+      scoreDiv.style.display = '';
     }
-    scoreDiv.innerHTML = resumen;
     submitBtn.textContent = lang === 'es' ? 'Reiniciar' : 'Restart';
     submitBtn.disabled = false;
+    modeSelector.disabled = false;
+    submitBtn.style.background = '#ffd166';
+    submitBtn.style.color = '#222';
     updateProgress();
     return;
   }
@@ -234,11 +482,88 @@ function loadImage() {
   submitBtn.disabled = false;
   canGuess = true;
   updateProgress();
+  if (gameMode === 'timer') {
+    timeLeft = 5;
+    showTimer();
+    updateProgress(); // Para asegurar posición
+    timerInterval = setInterval(() => {
+      timeLeft--;
+      showTimer();
+      updateProgress();
+      if (timeLeft <= 0) {
+        clearInterval(timerInterval);
+        canGuess = false;
+        distanceStats.fail++;
+        // NO incrementar guessedCount aquí, solo al pasar a la siguiente imagen
+        submitBtn.textContent = texts[lang].next;
+        submitBtn.disabled = false;
+        scoreDiv.innerHTML += `<div id='score-details' class='score-details' style='color:#ffd166;'>${lang === 'es' ? '¡Tiempo agotado!' : 'Time is up!'}</div>`;
+      }
+    }, 1000);
+  }
+  if (gameMode === 'lives') {
+    showLives();
+  }
+  // Cambiar color del botón según el estado
+  if (submitBtn.textContent === (lang === 'es' ? 'Comenzar' : 'Start') || submitBtn.textContent === (lang === 'es' ? 'Reiniciar' : 'Restart')) {
+    submitBtn.style.background = '#ffd166';
+    submitBtn.style.color = '#222';
+  } else if (submitBtn.textContent === texts[lang].send || submitBtn.textContent === texts[lang].next) {
+    submitBtn.style.background = '#21c97a';
+    submitBtn.style.color = '#fff';
+  }
 }
 
+// Modificar submitBtn para modos
 submitBtn.addEventListener('click', () => {
+  if (preGame) {
+    // Resetear correctamente todas las variables de estado
+    score = 0;
+    guessedCount = 0;
+    canGuess = true;
+    gameFinished = false;
+    remainingImages = images.map((_, i) => i);
+    distanceStats = { under25: 0, under50: 0, under100: 0, fail: 0 };
+    lives = 3;
+    preGame = false;
+    hideTimer();
+    hideLives();
+    updateProgress();
+    clueImage.style.display = '';
+    scoreDiv.textContent = `${texts[lang].score}: ${score}`;
+    scoreDiv.innerHTML += `<div id='score-details' class='score-details'></div>`;
+    modeSelector.disabled = true;
+    submitBtn.style.background = '#21c97a'; // Verde
+    submitBtn.style.color = '#fff';
+    loadImage();
+    return;
+  }
   if (gameFinished) {
-    startGame();
+    // Si el juego terminó y se presiona Reiniciar, iniciar directamente el juego en el modo seleccionado
+    preGame = false;
+    score = 0;
+    guessedCount = 0;
+    canGuess = true;
+    gameFinished = false;
+    remainingImages = images.map((_, i) => i);
+    distanceStats = { under25: 0, under50: 0, under100: 0, fail: 0 };
+    lives = 3;
+    hideTimer();
+    hideLives();
+    updateProgress();
+    clueImage.style.display = '';
+    scoreDiv.textContent = `${texts[lang].score}: ${score}`;
+    scoreDiv.innerHTML += `<div id='score-details' class='score-details'></div>`;
+    // Mostrar u ocultar scoreDiv según el modo
+    scoreDiv.style.display = gameMode === 'lives' ? 'none' : '';
+    if (gameMode === 'lives') showLives();
+    modeSelector.disabled = true;
+    loadImage();
+    // Forzar color amarillo tras cargar la primera imagen si es reinicio
+    if (submitBtn.textContent === (lang === 'es' ? 'Reiniciar' : 'Restart')) {
+      submitBtn.style.background = '#ffd166';
+      submitBtn.style.color = '#222';
+    }
     return;
   }
   if (submitBtn.textContent === texts[lang].next) {
@@ -247,7 +572,8 @@ submitBtn.addEventListener('click', () => {
     canGuess = true;
     return;
   }
-  if (!guess) return alert(texts[lang].alert);
+  if (!guess && gameMode !== 'timer') return alert(texts[lang].alert);
+  if (timerInterval) clearInterval(timerInterval);
   // Convertir coordenadas reales a la escala visual actual
   const real = images[currentImageIndex];
   const realX = (real.x / MAP_BASE_WIDTH) * map.offsetWidth;
@@ -262,6 +588,29 @@ submitBtn.addEventListener('click', () => {
   else if (dist < 50) distanceStats.under50++;
   else if (dist < 100) distanceStats.under100++;
   else distanceStats.fail++;
+
+  // --- LÓGICA CORREGIDA PARA MODO VIDAS ---
+  if (gameMode === 'lives') {
+    if (dist >= 75) {
+      lives--;
+    }
+    showLives();
+    if (lives <= 0) {
+      canGuess = false;
+      guessedCount++;
+      loadImage();
+      return;
+    }
+    // No mostrar puntos ni detalles en modo vidas
+    scoreDiv.textContent = '';
+    resultDiv.innerHTML = '';
+    submitBtn.textContent = texts[lang].next;
+    submitBtn.disabled = false;
+    canGuess = false;
+    return;
+  }
+  // --- FIN LÓGICA VIDAS ---
+
   scoreDiv.textContent = `${texts[lang].score}: ${score}`;
   scoreDiv.innerHTML += `<div id='score-details' class='score-details'>${texts[lang].distance}: <span style='color:#ffd166'>${Math.round(dist)} metros</span><br>${texts[lang].points}: <strong style='color:#fff;font-size:1.7rem;'>${points}</strong></div>`;
   resultDiv.innerHTML = '';
