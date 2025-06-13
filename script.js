@@ -69,7 +69,7 @@ const texts = {
     distance: 'Distancia',
     points: 'Puntos obtenidos',
     alert: 'Haz clic en el mapa para adivinar primero.',
-    support: 'Para poder mantener el juego activo, por favor apoya al proyecto en <a href="https://paypal.me/yourlink" target="_blank" style="color:#7fffa6;text-decoration:underline;font-weight:bold;">PayPal</a> o <a href="https://ko-fi.com/yourlink" target="_blank" style="color:#ffd166;text-decoration:underline;font-weight:bold;">Ko-fi</a>.'
+    support: 'Para poder mantener el juego activo, por favor apoya al proyecto en <a href="https://paypal.me/RobinsonFredes?country.x=AR&locale.x=es_XC" target="_blank" style="color:#7fffa6;text-decoration:underline;font-weight:bold;">PayPal</a> o <a href="https://ko-fi.com/yourlink" target="_blank" style="color:#ffd166;text-decoration:underline;font-weight:bold;">Ko-fi</a>.'
   },
   en: {
     title: 'Where is this place?',
@@ -81,7 +81,7 @@ const texts = {
     distance: 'Distance',
     points: 'Points earned',
     alert: 'Click on the map to make a guess first.',
-    support: 'To help keep the game running, please support the project on <a href="https://paypal.me/yourlink" target="_blank" style="color:#7fffa6;text-decoration:underline;font-weight:bold;">PayPal</a> or <a href="https://ko-fi.com/yourlink" target="_blank" style="color:#ffd166;text-decoration:underline;font-weight:bold;">Ko-fi</a>.'
+    support: 'To help keep the game running, please support the project on <a href="https://paypal.me/RobinsonFredes?country.x=AR&locale.x=es_XC" target="_blank" style="color:#7fffa6;text-decoration:underline;font-weight:bold;">PayPal</a> or <a href="https://ko-fi.com/robinsonfredes" target="_blank" style="color:#ffd166;text-decoration:underline;font-weight:bold;">Ko-fi</a>.'
   }
 };
 let lang = 'es';

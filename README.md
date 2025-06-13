@@ -18,7 +18,7 @@ Juego web de adivinanza de ubicaciones en mapas, inspirado en GeoGuessr, adaptad
 ## Estructura del proyecto
 ```
 The Isle Guesser/
-├── ti_guess_game.html
+├── index.html
 ├── style.css
 ├── script.js
 └── images/
@@ -26,20 +26,11 @@ The Isle Guesser/
     └── map_gateway.png
 ```
 
-## Cómo desplegar en Netlify
-1. Sube este proyecto a un repositorio de GitHub.
-2. Entra a [Netlify](https://app.netlify.com/) y selecciona "Add new site" > "Import an existing project".
-3. Conecta tu cuenta de GitHub y elige el repositorio.
-4. Deja vacío el campo "build command" y usa la raíz del proyecto como "publish directory".
-5. Haz clic en "Deploy site".
-
-¡Listo! Tu juego estará disponible en una URL pública.
-
 ---
 
 **Apoya el proyecto:**
-- [PayPal](https://paypal.me/yourlink)
-- [Ko-fi](https://ko-fi.com/yourlink)
+- [PayPal](https://paypal.me/RobinsonFredes?country.x=AR&locale.x=es_XC)
+- [Ko-fi](https://ko-fi.com/robinsonfredes)
 
 ---
 
