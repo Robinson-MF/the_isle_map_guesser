@@ -1,7 +1,5 @@
-// Coordenadas y rutas de imágenes del usuario
-// Escala base del mapa (ajusta a la resolución real de tu imagen)
-const MAP_BASE_WIDTH = 2048; // ejemplo, pon el ancho real de map_gateway.png
-const MAP_BASE_HEIGHT = 2048; // ejemplo, pon el alto real de map_gateway.png
+const MAP_BASE_WIDTH = 2048;
+const MAP_BASE_HEIGHT = 2048;
 const images = [
   { img: 'images/guess_1.jpg', x: 535, y: 1028 },
   { img: 'images/guess_2.jpg', x: 556, y: 1298 },
@@ -69,7 +67,7 @@ const texts = {
     distance: 'Distancia',
     points: 'Puntos obtenidos',
     alert: 'Haz clic en el mapa para adivinar primero.',
-    support: 'Para poder mantener el juego activo, por favor apoya al proyecto en <a href="https://paypal.me/RobinsonFredes?country.x=AR&locale.x=es_XC" target="_blank" style="color:#7fffa6;text-decoration:underline;font-weight:bold;">PayPal</a> o <a href="https://ko-fi.com/yourlink" target="_blank" style="color:#ffd166;text-decoration:underline;font-weight:bold;">Ko-fi</a>.'
+    support: 'Para poder mantener el juego activo, por favor apoya al proyecto en <a href="https://paypal.me/RobinsonFredes" target="_blank" style="color:#7fffa6;text-decoration:underline;font-weight:bold;">PayPal</a> o <a href="https://ko-fi.com/robinsonfredes" target="_blank" style="color:#ffd166;text-decoration:underline;font-weight:bold;">Ko-fi</a>.'
   },
   en: {
     title: 'Where is this place?',
@@ -81,7 +79,7 @@ const texts = {
     distance: 'Distance',
     points: 'Points earned',
     alert: 'Click on the map to make a guess first.',
-    support: 'To help keep the game running, please support the project on <a href="https://paypal.me/RobinsonFredes?country.x=AR&locale.x=es_XC" target="_blank" style="color:#7fffa6;text-decoration:underline;font-weight:bold;">PayPal</a> or <a href="https://ko-fi.com/robinsonfredes" target="_blank" style="color:#ffd166;text-decoration:underline;font-weight:bold;">Ko-fi</a>.'
+    support: 'If you enjoy the game, please consider supporting the project on <a href="https://paypal.me/RobinsonFredes" target="_blank" style="color:#7fffa6;text-decoration:underline;font-weight:bold;">PayPal</a> or <a href="https://ko-fi.com/robinsonfredes" target="_blank" style="color:#ffd166;text-decoration:underline;font-weight:bold;">Ko-fi</a>.'
   }
 };
 let lang = 'es';

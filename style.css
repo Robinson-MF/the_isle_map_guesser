@@ -21,9 +21,9 @@ body {
   min-height: 0;
 }
 .sidebar {
-  width: 29.12vw; /* 40% más ancha que 20.8vw */
-  min-width: 291px; /* 40% más que 208px */
-  max-width: 546px; /* 40% más que 390px */
+  width: 29.12vw;
+  min-width: 291px;
+  max-width: 546px;
   background: #23272f;
   padding: 2vw 1.3vw 1.3vw 1.3vw;
   display: flex;
@@ -34,12 +34,12 @@ body {
 }
 .sidebar h2 {
   margin-top: 0;
-  font-size: 3.1rem; /* más grande */
+  font-size: 3.1rem;
   margin-bottom: 12px;
   color: #fff;
 }
 .sidebar h2.desc-text {
-  font-size: 2.1rem !important;
+  font-size: 2.1rem
 }
 .sidebar p {
   margin: 0 0 14px 0;
@@ -47,7 +47,7 @@ body {
   font-size: 0.81rem;
 }
 .sidebar .desc-text {
-  font-size: 1.0rem !important;
+  font-size: 1.0rem;
   color: #bfc9d1;
   margin-bottom: 10px;
 }

@@ -29,7 +29,7 @@ The Isle Guesser/
 ---
 
 **Apoya el proyecto:**
-- [PayPal](https://paypal.me/RobinsonFredes?country.x=AR&locale.x=es_XC)
+- [PayPal](https://paypal.me/RobinsonFredes)
 - [Ko-fi](https://ko-fi.com/robinsonfredes)
 
 ---
