@@ -187,11 +187,10 @@ function getRandomImageIndexNoRepeat() {
 
 function updateOverlaySize() {
   // Ajusta el overlay al tamaño y posición del mapa
-  const rect = map.getBoundingClientRect();
-  markerOverlay.style.width = map.offsetWidth + 'px';
-  markerOverlay.style.height = map.offsetHeight + 'px';
-  markerOverlay.style.left = map.offsetLeft + 'px';
-  markerOverlay.style.top = map.offsetTop + 'px';
+  markerOverlay.style.width = '100%';
+  markerOverlay.style.height = '100%';
+  markerOverlay.style.left = '0';
+  markerOverlay.style.top = '0';
 }
 window.addEventListener('resize', updateOverlaySize);
 window.addEventListener('DOMContentLoaded', () => {
@@ -200,22 +199,205 @@ window.addEventListener('DOMContentLoaded', () => {
   updateOverlaySize();
 });
 
-map.addEventListener('click', e => {
-  if (!canGuess) return;
-  updateOverlaySize();
+// --- ZOOM SOLO SOBRE LA IMAGEN, NO SOBRE EL DIV ---
+// Asume que el fondo del div#map es la imagen del mapa
+// Cambia para usar una <img id="map-img"> dentro de #map y aplicar el zoom solo a esa imagen y al overlay
+
+// Si no existe, crea la imagen del mapa dentro del div#map
+let mapImg = document.getElementById('map-img');
+if (!mapImg) {
+  mapImg = document.createElement('img');
+  mapImg.id = 'map-img';
+  mapImg.src = 'images/map_gateway.png';
+  mapImg.alt = 'Mapa';
+  mapImg.style.width = '100%';
+  mapImg.style.height = '100%';
+  mapImg.style.position = 'absolute';
+  mapImg.style.left = '0';
+  mapImg.style.top = '0';
+  mapImg.style.zIndex = '1';
+  mapImg.style.userSelect = 'none';
+  mapImg.draggable = false;
+  map.appendChild(mapImg);
+}
+markerOverlay.style.position = 'absolute';
+markerOverlay.style.left = '0';
+markerOverlay.style.top = '0';
+markerOverlay.style.width = '100%';
+markerOverlay.style.height = '100%';
+markerOverlay.style.zIndex = '2';
+
+let mapScale = 1;
+const mapMinScale = 1;
+const mapMaxScale = 4;
+
+function setMapImageTransform(originX = 0.5, originY = 0.5) {
+  mapImg.style.transformOrigin = `${originX * 100}% ${originY * 100}%`;
+  mapImg.style.transform = `scale(${mapScale})`;
+  markerOverlay.style.transformOrigin = mapImg.style.transformOrigin;
+  markerOverlay.style.transform = mapImg.style.transform;
+}
+
+// Mouse wheel zoom (centrado en el puntero)
+map.addEventListener('wheel', function(e) {
+  e.preventDefault();
   const rect = map.getBoundingClientRect();
-  // Convertir el click a la escala base del mapa
-  const x = ((e.clientX - rect.left) / rect.width) * MAP_BASE_WIDTH;
-  const y = ((e.clientY - rect.top) / rect.height) * MAP_BASE_HEIGHT;
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+  const originX = mouseX / rect.width;
+  const originY = mouseY / rect.height;
+  let delta = e.deltaY < 0 ? 1.1 : 0.9;
+  mapScale = Math.max(mapMinScale, Math.min(mapMaxScale, mapScale * delta));
+  setMapImageTransform(originX, originY);
+}, { passive: false });
+
+// Pinch-to-zoom (centrado en el centro del marco)
+let lastTouchDist = null;
+map.addEventListener('touchstart', function(e) {
+  if (e.touches.length === 2) {
+    lastTouchDist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+  }
+}, { passive: false });
+map.addEventListener('touchmove', function(e) {
+  if (e.touches.length === 2 && lastTouchDist) {
+    const newDist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+    let scaleDelta = newDist / lastTouchDist;
+    mapScale = Math.max(mapMinScale, Math.min(mapMaxScale, mapScale * scaleDelta));
+    setMapImageTransform(); // centrado
+    lastTouchDist = newDist;
+  }
+}, { passive: false });
+map.addEventListener('touchend', function(e) {
+  if (e.touches.length < 2) lastTouchDist = null;
+});
+
+// --- NUEVA LÓGICA DE CLICK Y MARCADORES CON ZOOM Y PAN ---
+function getMapClickCoords(e) {
+  const rect = map.getBoundingClientRect();
+  // Obtener transformOrigin y scale actuales
+  const origin = mapImg.style.transformOrigin.split(' ');
+  const originX = parseFloat(origin[0]) / 100;
+  const originY = parseFloat(origin[1]) / 100;
+  // Posición del click relativa al marco
+  const clickX = (e.clientX - rect.left);
+  const clickY = (e.clientY - rect.top);
+  // Centro del marco
+  const cx = rect.width * originX;
+  const cy = rect.height * originY;
+  // Trasladar el click al sistema de la imagen escalada y paneada
+  const px = (clickX - cx) / mapScale + cx;
+  const py = (clickY - cy) / mapScale + cy;
+  // Convertir a la escala base del mapa
+  const x = (px / rect.width) * MAP_BASE_WIDTH;
+  const y = (py / rect.height) * MAP_BASE_HEIGHT;
+  return { x, y, px, py };
+}
+
+map.addEventListener('click', e => {
+  if (wasDragging) {
+    wasDragging = false;
+    return;
+  }
+  if (!canGuess) return;
+  // Bounding box de la imagen
+  const imgRect = mapImg.getBoundingClientRect();
+  // Verifica que el click esté dentro de la imagen
+  if (
+    e.clientX < imgRect.left ||
+    e.clientX > imgRect.right ||
+    e.clientY < imgRect.top ||
+    e.clientY > imgRect.bottom
+  ) return;
+  const clickX = e.clientX - imgRect.left;
+  const clickY = e.clientY - imgRect.top;
+  const x = (clickX / imgRect.width) * MAP_BASE_WIDTH;
+  const y = (clickY / imgRect.height) * MAP_BASE_HEIGHT;
+  guessCoords = { x, y };
   guess = { x, y };
-  clearMarkers();
-  // Para mostrar el marcador en la posición correcta en pantalla:
-  const markerX = (x / MAP_BASE_WIDTH) * map.offsetWidth;
-  const markerY = (y / MAP_BASE_HEIGHT) * map.offsetHeight;
-  placeMarker(markerX, markerY);
-  // Mostrar coordenadas en consola en escala base
+  clearMarkers(); // Elimina todos los marcadores antes de agregar uno nuevo
+  drawGuessMarker();
   console.log(`Coordenadas para array: x: ${Math.round(x)}, y: ${Math.round(y)}`);
 });
+
+// Sobrescribe placeMarker para usar coordenadas relativas al marco
+function placeMarker(px, py, isReal = false) {
+  const marker = document.createElement('div');
+  marker.className = 'marker';
+  if (isReal) marker.classList.add('real-marker');
+  marker.style.left = `${px}px`;
+  marker.style.top = `${py}px`;
+  markerOverlay.appendChild(marker);
+}
+// --- Fin de zoom solo imagen ---
+
+// --- PAN SOLO SOBRE LA IMAGEN, NO SOBRE EL DIV ---
+let isDragging = false;
+let dragStart = { x: 0, y: 0 };
+let imgOrigin = { x: 0.5, y: 0.5 };
+
+map.addEventListener('mousedown', function(e) {
+  if (e.button !== 0) return; // solo click izquierdo
+  isDragging = true;
+  dragStart = { x: e.clientX, y: e.clientY };
+  // Guardar el origen actual de la imagen
+  const origin = mapImg.style.transformOrigin.split(' ');
+  imgOrigin = {
+    x: parseFloat(origin[0]) / 100,
+    y: parseFloat(origin[1]) / 100
+  };
+});
+document.addEventListener('mousemove', function(e) {
+  if (!isDragging) return;
+  const rect = map.getBoundingClientRect();
+  // Calcular el desplazamiento relativo al tamaño del marco
+  const dx = (e.clientX - dragStart.x) / rect.width;
+  const dy = (e.clientY - dragStart.y) / rect.height;
+  let newOriginX = imgOrigin.x - dx / mapScale;
+  let newOriginY = imgOrigin.y - dy / mapScale;
+  // Limitar el origen entre 0 y 1 para que no se salga
+  newOriginX = Math.max(0, Math.min(1, newOriginX));
+  newOriginY = Math.max(0, Math.min(1, newOriginY));
+  setMapImageTransform(newOriginX, newOriginY);
+});
+document.addEventListener('mouseup', function(e) {
+  if (!isDragging) return;
+  isDragging = false;
+  // Solo colocar marcador si el mouseup fue sobre el mapa y el movimiento fue mínimo
+  const rect = map.getBoundingClientRect();
+  const moved = Math.abs(e.clientX - dragStart.x) + Math.abs(e.clientY - dragStart.y);
+  if (
+    e.target === map &&
+    moved < 5 &&
+    canGuess
+  ) {
+    // Bounding box de la imagen
+    const imgRect = mapImg.getBoundingClientRect();
+    if (
+      e.clientX < imgRect.left ||
+      e.clientX > imgRect.right ||
+      e.clientY < imgRect.top ||
+      e.clientY > imgRect.bottom
+    ) return;
+    const clickX = e.clientX - imgRect.left;
+    const clickY = e.clientY - imgRect.top;
+    const x = (clickX / imgRect.width) * MAP_BASE_WIDTH;
+    const y = (clickY / imgRect.height) * MAP_BASE_HEIGHT;
+    guessCoords = { x, y };
+    guess = { x, y };
+    clearMarkers();
+    drawGuessMarker();
+    console.log(`Coordenadas para array: x: ${Math.round(x)}, y: ${Math.round(y)}`);
+  }
+});
+
+// Eliminar el handler de click para el marcador
+// --- Fin de pan solo imagen ---
 
 const texts = {
   es: {
@@ -346,6 +528,7 @@ function setLanguage(l) {
   }
   updateProgress();
 }
+
 document.getElementById('lang-es').onclick = () => setLanguage('es');
 document.getElementById('lang-en').onclick = () => setLanguage('en');
 
@@ -497,7 +680,17 @@ function hideLives() {
   livesDiv.style.display = 'none';
 }
 
+function clearMarkers() {
+  // Elimina todos los divs .marker dentro de #map
+  document.querySelectorAll('#map .marker').forEach(el => el.remove());
+  // Elimina la línea SVG si existe
+  const svg = document.getElementById('guess-line-svg');
+  if (svg) svg.remove();
+}
+
 function loadImage() {
+  guessCoords = null;
+  realCoords = null;
   if (timerInterval) clearInterval(timerInterval);
   hideTimer();
   hideLives();
@@ -653,10 +846,10 @@ submitBtn.addEventListener('click', () => {
   if (timerInterval) clearInterval(timerInterval);
   // Convertir coordenadas reales a la escala visual actual
   const real = gameImages[currentImageIndex];
-  const realX = (real.x / MAP_BASE_WIDTH) * map.offsetWidth;
-  const realY = (real.y / MAP_BASE_HEIGHT) * map.offsetHeight;
-  placeMarker(realX, realY, true);
-  drawLine((guess.x / MAP_BASE_WIDTH) * map.offsetWidth, (guess.y / MAP_BASE_HEIGHT) * map.offsetHeight, realX, realY);
+  clearMarkers(); // Limpia todos los marcadores antes de dibujar
+  drawGuessMarker(); // Dibuja el marcador rojo del usuario
+  drawRealMarker(real.x, real.y); // Dibuja el marcador verde de la ubicación real
+  drawLineBaseCoords(guess.x, guess.y, real.x, real.y); // Dibuja la línea
   const dist = calculateDistance(guess.x, guess.y, real.x, real.y);
   const points = calculatePoints(dist);
   score += points;
@@ -697,40 +890,49 @@ submitBtn.addEventListener('click', () => {
   canGuess = false;
 });
 
-function clearMarkers() {
-  markerOverlay.innerHTML = '';
-  document.querySelectorAll('svg.guess-line').forEach(e => e.remove());
-}
-function placeMarker(x, y, isReal = false) {
-  const marker = document.createElement('div');
-  marker.className = 'marker';
-  if (isReal) marker.classList.add('real-marker');
-  marker.style.left = `${x}px`;
-  marker.style.top = `${y}px`;
-  markerOverlay.appendChild(marker);
-}
-function drawLine(x1, y1, x2, y2) {
-  // Línea sigue en el mapa para no superponer el overlay
-  const svgNS = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(svgNS, 'svg');
-  svg.classList.add('guess-line');
-  svg.setAttribute('width', map.offsetWidth);
-  svg.setAttribute('height', map.offsetHeight);
-  svg.setAttribute('style', `position:absolute;top:0;left:0;width:${map.offsetWidth}px;height:${map.offsetHeight}px;pointer-events:none;`);
-  const line = document.createElementNS(svgNS, 'line');
-  line.setAttribute('x1', x1);
-  line.setAttribute('y1', y1);
-  line.setAttribute('x2', x2);
-  line.setAttribute('y2', y2);
-  line.setAttribute('stroke', '#ffd166');
-  line.setAttribute('stroke-width', '3');
-  svg.appendChild(line);
-  map.appendChild(svg);
-}
 function calculateDistance(x1, y1, x2, y2) {
   // Devuelve la distancia en la escala base (px)
   return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
 }
+
+// --- MARCADOR SIEMPRE EN COORDENADAS BASE (x, y) ---
+let guessCoords = null; // {x, y} en base 2048x2048
+let realCoords = null; // Guarda la ubicación real en base 2048x2048
+
+function getBaseCoordsFromClick(e) {
+  // Bounding box de la imagen
+  const imgRect = mapImg.getBoundingClientRect();
+  const clickX = e.clientX - imgRect.left;
+  const clickY = e.clientY - imgRect.top;
+  const x = (clickX / imgRect.width) * MAP_BASE_WIDTH;
+  const y = (clickY / imgRect.height) * MAP_BASE_HEIGHT;
+  return { x, y };
+}
+
+function getVisualCoordsFromBase(x, y) {
+  // Convierte coordenadas base (2048x2048) a px en el overlay/mapa actual
+  const imgRect = mapImg.getBoundingClientRect();
+  const mapRect = map.getBoundingClientRect();
+  const visualW = imgRect.width;
+  const visualH = imgRect.height;
+  const offsetX = imgRect.left - mapRect.left;
+  const offsetY = imgRect.top - mapRect.top;
+  const px = (x / MAP_BASE_WIDTH) * visualW + offsetX;
+  const py = (y / MAP_BASE_HEIGHT) * visualH + offsetY;
+  return { px, py };
+}
+
+map.addEventListener('click', e => {
+  if (!canGuess) return;
+  // Obtener coordenadas base exactamente como en el log
+  const { x, y } = getBaseCoordsFromClick(e);
+  guessCoords = { x, y };
+  guess = { x, y };
+  clearMarkers();
+  drawGuessMarker();
+  console.log(`Coordenadas para array: x: ${Math.round(x)}, y: ${Math.round(y)}`);
+});
+
 function calculatePoints(distance) {
   if (distance < 25) return 10;
   if (distance < 50) return 5;
@@ -739,7 +941,68 @@ function calculatePoints(distance) {
   return 0;
 }
 
-// Agrega el texto de instrucciones de inicio solo en la fase de preGame
+function drawGuessMarker() {
+  if (!guessCoords) return;
+  const { px, py } = getVisualCoordsFromBase(guessCoords.x, guessCoords.y);
+  // Crear el div marcador y agregarlo directamente a #map
+  const marker = document.createElement('div');
+  marker.className = 'marker';
+  marker.style.position = 'absolute';
+  marker.style.left = `${px}px`;
+  marker.style.top = `${py}px`;
+  marker.style.pointerEvents = 'none';
+  map.appendChild(marker);
+}
+
+function drawRealMarker(x, y) {
+  realCoords = { x, y };
+  const { px, py } = getVisualCoordsFromBase(x, y);
+  const marker = document.createElement('div');
+  marker.className = 'marker real-marker';
+  marker.style.position = 'absolute';
+  marker.style.left = `${px}px`;
+  marker.style.top = `${py}px`;
+  marker.style.pointerEvents = 'none';
+  map.appendChild(marker);
+}
+
+function drawLineBaseCoords(x1, y1, x2, y2) {
+  // Dibuja una línea SVG entre dos puntos dados en coordenadas base (2048x2048) dentro de #map
+  const { px: px1, py: py1 } = getVisualCoordsFromBase(x1, y1);
+  const { px: px2, py: py2 } = getVisualCoordsFromBase(x2, y2);
+  let svg = document.getElementById('guess-line-svg');
+  if (svg) svg.remove();
+  svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('id', 'guess-line-svg');
+  svg.setAttribute('width', map.offsetWidth);
+  svg.setAttribute('height', map.offsetHeight);
+  svg.style.position = 'absolute';
+  svg.style.left = '0';
+  svg.style.top = '0';
+  svg.style.pointerEvents = 'none';
+  svg.style.zIndex = '1';
+  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  line.setAttribute('x1', px1);
+  line.setAttribute('y1', py1);
+  line.setAttribute('x2', px2);
+  line.setAttribute('y2', py2);
+  line.setAttribute('stroke', '#ffd166');
+  line.setAttribute('stroke-width', '3');
+  svg.appendChild(line);
+  map.appendChild(svg);
+}
+
+// Redibujar marcadores y línea al hacer zoom/pan
+const origSetMapImageTransform = setMapImageTransform;
+setMapImageTransform = function(originX = 0.5, originY = 0.5) {
+  origSetMapImageTransform(originX, originY);
+  clearMarkers();
+  drawGuessMarker();
+  if (realCoords) drawRealMarker(realCoords.x, realCoords.y);
+  if (guessCoords && realCoords) drawLineBaseCoords(guessCoords.x, guessCoords.y, realCoords.x, realCoords.y);
+};
+
+// --- Restaurar funciones de instrucciones de inicio ---
 function showStartInstruction() {
   let startInstruction = document.getElementById('start-instruction');
   if (!startInstruction) {
