@@ -341,10 +341,12 @@ function placeMarker(px, py, isReal = false) {
 let isDragging = false;
 let dragStart = { x: 0, y: 0 };
 let imgOrigin = { x: 0.5, y: 0.5 };
+let wasDragging = false; // Para controlar si hubo drag antes del click
 
 map.addEventListener('mousedown', function(e) {
   if (e.button !== 0) return; // solo click izquierdo
   isDragging = true;
+  wasDragging = false;
   dragStart = { x: e.clientX, y: e.clientY };
   // Guardar el origen actual de la imagen
   const origin = mapImg.style.transformOrigin.split(' ');
@@ -365,6 +367,9 @@ document.addEventListener('mousemove', function(e) {
   newOriginX = Math.max(0, Math.min(1, newOriginX));
   newOriginY = Math.max(0, Math.min(1, newOriginY));
   setMapImageTransform(newOriginX, newOriginY);
+  if (Math.abs(e.clientX - dragStart.x) + Math.abs(e.clientY - dragStart.y) > 3) {
+    wasDragging = true;
+  }
 });
 document.addEventListener('mouseup', function(e) {
   if (!isDragging) return;
@@ -377,23 +382,7 @@ document.addEventListener('mouseup', function(e) {
     moved < 5 &&
     canGuess
   ) {
-    // Bounding box de la imagen
-    const imgRect = mapImg.getBoundingClientRect();
-    if (
-      e.clientX < imgRect.left ||
-      e.clientX > imgRect.right ||
-      e.clientY < imgRect.top ||
-      e.clientY > imgRect.bottom
-    ) return;
-    const clickX = e.clientX - imgRect.left;
-    const clickY = e.clientY - imgRect.top;
-    const x = (clickX / imgRect.width) * MAP_BASE_WIDTH;
-    const y = (clickY / imgRect.height) * MAP_BASE_HEIGHT;
-    guessCoords = { x, y };
-    guess = { x, y };
-    clearMarkers();
-    drawGuessMarker();
-    console.log(`Coordenadas para array: x: ${Math.round(x)}, y: ${Math.round(y)}`);
+    wasDragging = false;
   }
 });
 
@@ -1054,10 +1043,11 @@ function drawRealMarker(x, y) {
 }
 
 function drawLineBaseCoords(x1, y1, x2, y2) {
-  // Dibuja una línea SVG entre dos puntos dados en coordenadas base (2048x2048) dentro de #map
-  const { px: px1, py: py1 } = getVisualCoordsFromBase(x1, y1);
-  if (svg) svg.remove();
-  svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  // Elimina el SVG anterior si existe
+  let oldSvg = document.getElementById('guess-line-svg');
+  if (oldSvg) oldSvg.remove();
+  // Crea un nuevo SVG
+  let svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('id', 'guess-line-svg');
   svg.setAttribute('width', map.offsetWidth);
   svg.setAttribute('height', map.offsetHeight);
@@ -1066,6 +1056,10 @@ function drawLineBaseCoords(x1, y1, x2, y2) {
   svg.style.top = '0';
   svg.style.pointerEvents = 'none';
   svg.style.zIndex = '1';
+  // Calcula las posiciones visuales
+  const { px: px1, py: py1 } = getVisualCoordsFromBase(x1, y1);
+  const { px: px2, py: py2 } = getVisualCoordsFromBase(x2, y2);
+  // Crea la línea
   const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
   line.setAttribute('x1', px1);
   line.setAttribute('y1', py1);
