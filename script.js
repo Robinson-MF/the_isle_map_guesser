@@ -1,16 +1,26 @@
 const MAP_BASE_WIDTH = 2048;
 const MAP_BASE_HEIGHT = 2048;
 const images = [
-  { img: 'images/guess_1.jpg', x: 535, y: 1028 },
-  { img: 'images/guess_2.jpg', x: 556, y: 1298 },
-  { img: 'images/guess_3.jpg', x: 664, y: 1271 },
-  { img: 'images/guess_4.jpg', x: 1252, y: 1184 },
-  { img: 'images/guess_5.jpg', x: 1365, y: 735 },
-  { img: 'images/guess_6.jpg', x: 855, y: 284 },
-  { img: 'images/guess_7.jpg', x: 1141, y: 658 },
-  { img: 'images/guess_8.jpg', x: 1773, y: 676 },
-  { img: 'images/guess_9.jpg', x: 1047, y: 1083 },
-  { img: 'images/guess_10.jpg', x: 432, y: 790 }
+  { img: 'images/guess_imgs/guess_1.jpg', x: 535, y: 1028 },
+  { img: 'images/guess_imgs/guess_2.jpg', x: 556, y: 1298 },
+  { img: 'images/guess_imgs/guess_3.jpg', x: 664, y: 1271 },
+  { img: 'images/guess_imgs/guess_4.jpg', x: 1252, y: 1184 },
+  { img: 'images/guess_imgs/guess_5.jpg', x: 1365, y: 735 },
+  { img: 'images/guess_imgs/guess_6.jpg', x: 855, y: 284 },
+  { img: 'images/guess_imgs/guess_7.jpg', x: 1141, y: 658 },
+  { img: 'images/guess_imgs/guess_8.jpg', x: 1773, y: 676 },
+  { img: 'images/guess_imgs/guess_9.jpg', x: 1047, y: 1083 },
+  { img: 'images/guess_imgs/guess_10.jpg', x: 432, y: 790 },
+  { img: 'images/guess_imgs/guess_11.jpg', x: 1244, y: 795 },
+  { img: 'images/guess_imgs/guess_12.jpg', x: 1385, y: 844 },
+  { img: 'images/guess_imgs/guess_13.jpg', x: 1715, y: 750 },
+  { img: 'images/guess_imgs/guess_14.jpg', x: 1731, y: 597 },
+  { img: 'images/guess_imgs/guess_15.jpg', x: 1270, y: 340 },
+  { img: 'images/guess_imgs/guess_16.jpg', x: 1159, y: 393 },
+  { img: 'images/guess_imgs/guess_17.jpg', x: 688, y: 946 },
+  { img: 'images/guess_imgs/guess_18.jpg', x: 820, y: 763 },
+  { img: 'images/guess_imgs/guess_19.jpg', x: 986, y: 357 },
+  { img: 'images/guess_imgs/guess_20.jpg', x: 918, y: 1737 }
 ];
 const clueImage = document.getElementById('clue-image');
 const map = document.getElementById('map');
@@ -31,11 +41,26 @@ let guess = null;
 let score = 0;
 let canGuess = true;
 let remainingImages = [];
-let totalImages = images.length;
+let totalImages = 10; // Siempre 10 rondas
 let guessedCount = 0;
 let gameFinished = false;
-let distanceStats = { under25: 0, under50: 0, under100: 0, fail: 0 };
+let distanceStats = { under25: 0, under50: 0, under75: 0, under100: 0 };
 let preGame = true; // Nueva bandera para la fase de "Comenzar"
+
+// Nuevo: array de imágenes para la partida
+let gameImages = [];
+
+function getRandomImages(arr, n) {
+  // Devuelve un array con n elementos aleatorios de arr, sin repetidos
+  const copy = arr.slice();
+  const result = [];
+  for (let i = 0; i < n && copy.length > 0; i++) {
+    const idx = Math.floor(Math.random() * copy.length);
+    result.push(copy[idx]);
+    copy.splice(idx, 1);
+  }
+  return result;
+}
 
 function updateProgress() {
   let progress = document.getElementById('progress-text');
@@ -82,17 +107,24 @@ function setPreGameState() {
   gameFinished = false;
   guessedCount = 0;
   score = 0;
-  distanceStats = { under25: 0, under50: 0, under100: 0, fail: 0 };
+  distanceStats = { under25: 0, under50: 0, under75: 0, under100: 0, fail: 0 };
   clueImage.style.display = 'none';
   clearMarkers();
   resultDiv.textContent = '';
   scoreDiv.textContent = '';
+  // Limpiar detalles de puntuación y resumen de distancia si existen
+  const scoreDetails = document.getElementById('score-details');
+  if (scoreDetails) scoreDetails.textContent = '';
+  const distanceSummary = document.querySelector('.distance-summary');
+  if (distanceSummary) distanceSummary.remove();
   updateProgress();
   modeSelector.disabled = false;
   submitBtn.textContent = lang === 'es' ? 'Comenzar' : 'Start';
   submitBtn.style.background = '#ffd166';
   submitBtn.style.color = '#222';
   submitBtn.disabled = false;
+  // No mostrar corazones en preGame
+  hideLives();
 }
 
 function startGame() {
@@ -101,11 +133,19 @@ function startGame() {
   guessedCount = 0;
   canGuess = true;
   gameFinished = false;
-  remainingImages = images.map((_, i) => i);
-  distanceStats = { under25: 0, under50: 0, under100: 0, fail: 0 };
-  if (timerInterval) clearInterval(timerInterval);
-  hideTimer();
-  hideLives();
+  // Seleccionar 10 imágenes aleatorias para la partida
+  gameImages = getRandomImages(images, 10);
+  remainingImages = gameImages.map((_, i) => i);
+  distanceStats = { under25: 0, under50: 0, under75: 0, under100: 0, fail: 0 };
+  if (timerInterval) hideTimer();
+  // Mostrar corazones solo si el modo es vidas
+  if (gameMode === 'lives') {
+    lives = 3;
+    showLives();
+  } else {
+    hideLives();
+  }
+  lastGameWasLives = false; // Al iniciar cualquier partida, se resetea
   updateProgress();
   clueImage.style.display = '';
   scoreDiv.textContent = `${texts[lang].score}: ${score}`;
@@ -114,6 +154,18 @@ function startGame() {
   submitBtn.style.background = '#21c97a'; // Verde
   submitBtn.style.color = '#fff';
   loadImage();
+}
+
+// Cuando termina la partida en modo vidas, los corazones deben seguir visibles
+function endGame() {
+  gameFinished = true;
+  canGuess = false;
+  // Guardar si la partida terminada fue en modo vidas
+  lastGameWasLives = (gameMode === 'lives');
+  // Mostrar corazones si el modo era vidas
+  if (gameMode === 'lives') {
+    showLives();
+  }
 }
 
 function getRandomImageIndexNoRepeat() {
@@ -218,58 +270,70 @@ function setLanguage(l) {
     if (gameMode === 'lives') showLives();
     resultDiv.innerHTML = '';
   } else if (gameFinished) {
+    clueImage.style.display = 'none'; // Oculta la imagen al finalizar el juego
     submitBtn.textContent = lang === 'es' ? 'Reiniciar' : 'Restart';
     submitBtn.style.background = '#ffd166'; // Amarillo como 'Comenzar'
     submitBtn.style.color = '#222';
     if (gameMode === 'lives') {
-      resultDiv.innerHTML = `<span style='font-size:2.2rem;color:${lives > 0 ? '#7fffa6' : '#ff4d4d'};font-weight:bold;display:block;margin:32px 0 24px 0;text-align:center;'>${lang === 'es' ? (lives > 0 ? '¡Ganaste!' : 'Perdiste') : (lives > 0 ? 'You won!' : 'You lost')}</span>`;
-      // Mostrar corazones debajo del mensaje final
-      let livesDiv = document.getElementById('lives-div');
-      if (!livesDiv) {
-        livesDiv = document.createElement('div');
-        livesDiv.id = 'lives-div';
-        livesDiv.style = 'font-size:1.6rem;font-weight:bold;margin:16px 0 16px 0;color:#ffd166;text-align:center;transition:all 0.2s;letter-spacing:0.5px;';
-        resultDiv.appendChild(livesDiv);
-      }
-      let hearts = '❤️'.repeat(lives) + '🖤'.repeat(3 - lives);
-      let label = lang === 'es' ? (lives === 1 ? 'vida' : 'vidas') : (lives === 1 ? 'life' : 'lives');
-      livesDiv.textContent = `${lives} ${label}: ${hearts}`;
-      livesDiv.style.display = 'block';
+      // Mostrar corazones y ocultar puntuación, sin sobrescribir el área
       scoreDiv.style.display = 'none';
+      showLives();
+      // No modificar resultDiv ni volver a escribir el mensaje de resultado aquí
     } else {
+      // Mostrar puntuación y ocultar corazones
+      scoreDiv.style.display = '';
+      hideLives();
       let resumen = `<div id='score-details' class='score-details' style='text-align:center;'>`;
       if (lang === 'es') {
-        resumen += `Tu puntuación final es: <strong style='color:#fff;font-size:1.7rem;'>${score}</strong></div>`;
+        resumen += `Tu puntuación final es: <strong style='color:#fff;font-size:1.7rem;'>${score}/100</strong></div>`;
         resumen += `<div class='distance-summary' style='margin:12px auto 0 auto;text-align:center;display:inline-block;font-size:1.1rem;color:#ffd166;'>`;
-        resumen += `Ubicaciones acertadas a menos de 25 metros: <strong style='color:rgba(60,200,60,0.85);'>${distanceStats.under25}</strong></span><br>`;
-        resumen += `Ubicaciones acertadas a menos de 50 metros: <strong style='color:rgba(255,220,50,0.85);'>${distanceStats.under50}</strong></span><br>`;
-        resumen += `Ubicaciones acertadas a menos de 100 metros: <strong style='color:rgba(255,140,0,0.85);'>${distanceStats.under100}</strong></span><br>`;
-        resumen += `Ubicaciones no acertadas: <strong style='color:rgba(220,40,40,0.85);'>${distanceStats.fail}</strong></span>`;
+        resumen += `Ubicaciones acertadas a menos de 25 metros: <strong style='color:rgba(60,200,60,0.85);'>${distanceStats.under25}</strong><br>`;
+        resumen += `Ubicaciones acertadas a menos de 50 metros: <strong style='color:rgba(50,180,255,0.85);'>${distanceStats.under50}</strong><br>`;
+        resumen += `Ubicaciones acertadas a menos de 75 metros: <strong style='color:rgba(255,220,50,0.85);'>${distanceStats.under75}</strong><br>`;
+        resumen += `Ubicaciones acertadas a menos de 100 metros: <strong style='color:rgba(255,140,0,0.85);'>${distanceStats.under100}</strong><br>`;
+        resumen += `Ubicaciones no acertadas: <strong style='color:rgba(220,40,40,0.85);'>${distanceStats.fail}</strong>`;
         resumen += `</div>`;
       } else {
-        resumen += `Your final score is: <strong style='color:#fff;font-size:1.7rem;'>${score}</strong></div>`;
+        resumen += `Your final score is: <strong style='color:#fff;font-size:1.7rem;'>${score}/100</strong></div>`;
         resumen += `<div class='distance-summary' style='margin:12px auto 0 auto;text-align:center;display:inline-block;font-size:1.1rem;color:#ffd166;'>`;
         resumen += `Locations guessed under 25 meters: <strong style='color:rgba(60,200,60,0.85);'>${distanceStats.under25}</strong><br>`;
-        resumen += `Locations guessed under 50 meters: <strong style='color:rgba(255,220,50,0.85);'>${distanceStats.under50}</strong><br>`;
+        resumen += `Locations guessed under 50 meters: <strong style='color:rgba(50,180,255,0.85);'>${distanceStats.under50}</strong><br>`;
+        resumen += `Locations guessed under 75 meters: <strong style='color:rgba(255,220,50,0.85);'>${distanceStats.under75}</strong><br>`;
         resumen += `Locations guessed under 100 meters: <strong style='color:rgba(255,140,0,0.85);'>${distanceStats.under100}</strong><br>`;
         resumen += `Locations not guessed: <strong style='color:rgba(220,40,40,0.85);'>${distanceStats.fail}</strong>`;
         resumen += `</div>`;
       }
       scoreDiv.innerHTML = resumen;
-      scoreDiv.style.display = '';
     }
-    hideLives();
+    // No llamar hideLives() aquí, para no ocultar corazones si el modo es 'lives'
   } else {
-    submitBtn.textContent = texts[lang].next;
-    submitBtn.style.background = '';
-    submitBtn.style.color = '';
-    scoreDiv.textContent = `${texts[lang].score}: ${score}`;
-    scoreDiv.innerHTML += `<div id='score-details' class='score-details'></div>`;
+    // --- NUEVO BLOQUE: traducir score-details si existe y hay datos ---
+    const scoreDetails = document.getElementById('score-details');
+    if (scoreDetails && scoreDetails.innerHTML.trim() !== '') {
+      // Extraer distancia y puntos usando RegExp
+      const distMatch = scoreDetails.innerHTML.match(/([0-9]+)\s*metros|([0-9]+)\s*meters/i);
+      const ptsMatch = scoreDetails.innerHTML.match(/<strong[^>]*>([0-9]+)<\/strong>/i);
+      let dist = distMatch ? (distMatch[1] || distMatch[2]) : null;
+      let pts = ptsMatch ? ptsMatch[1] : null;
+      // Renderizar traducido si ambos existen
+      if (dist && pts) {
+        scoreDiv.textContent = `${texts[lang].score}: ${score}`;
+        scoreDiv.innerHTML += `<div id='score-details' class='score-details'>${texts[lang].distance}: <span style='color:#ffd166'>${dist} ${lang === 'es' ? 'metros' : 'meters'}</span><br>${texts[lang].points}: <strong style='color:#fff;font-size:1.7rem;'>${pts}</strong></div>`;
+      } else {
+        // Si no se puede extraer, dejarlo vacío
+        scoreDiv.textContent = `${texts[lang].score}: ${score}`;
+        scoreDiv.innerHTML += `<div id='score-details' class='score-details'></div>`;
+      }
+    } else {
+      scoreDiv.textContent = `${texts[lang].score}: ${score}`;
+      scoreDiv.innerHTML += `<div id='score-details' class='score-details'></div>`;
+    }
     scoreDiv.style.display = gameMode === 'lives' ? 'none' : '';
     hideLives();
     if (gameMode === 'lives') showLives();
     resultDiv.innerHTML = '';
   }
+  updateProgress();
 }
 document.getElementById('lang-es').onclick = () => setLanguage('es');
 document.getElementById('lang-en').onclick = () => setLanguage('en');
@@ -351,17 +415,42 @@ let timerInterval = null;
 let timeLeft = 10;
 let lives = 3;
 
+// Asegurar que el contenedor de corazones exista siempre
+let livesDiv = document.getElementById('lives-div');
+if (!livesDiv) {
+  livesDiv = document.createElement('div');
+  livesDiv.id = 'lives-div';
+  livesDiv.style.display = 'none';
+  livesDiv.style.fontSize = '2rem';
+  livesDiv.style.fontWeight = 'bold';
+  livesDiv.style.color = '#ffd166';
+  livesDiv.style.margin = '18px 0 0 0';
+  livesDiv.style.textAlign = 'center';
+  // Insertar después del scoreDiv
+  scoreDiv.parentNode.insertBefore(livesDiv, scoreDiv.nextSibling);
+}
+
 modeSelector.addEventListener('change', function() {
   // Permitir cambiar el modo si está en preGame o si el juego ya terminó
-  if (!preGame && !gameFinished) {
-    modeSelector.value = gameMode;
-    return;
-  }
+  if (!preGame && !gameFinished) { return; }
   gameMode = this.value;
-  // Si el juego ya terminó, actualizar la UI inmediatamente
-  if (gameFinished) {
-    setLanguage(lang); // Refresca textos y resumen en el idioma y modo correcto
+  // Siempre ocultar corazones al cambiar de modo, excepto si la última partida terminada fue en modo vidas
+  if (gameFinished && lastGameWasLives) {
+    showLives();
+  } else {
+    hideLives();
   }
+  // Si el juego no terminó, limpiar pantalla y mostrar preGame
+  if (!gameFinished) {
+    resultDiv.textContent = '';
+    scoreDiv.textContent = '';
+    const scoreDetails = document.getElementById('score-details');
+    if (scoreDetails) scoreDetails.textContent = '';
+    const distanceSummary = document.querySelector('.distance-summary');
+    if (distanceSummary) distanceSummary.remove();
+    setPreGameState();
+  }
+  // Si el juego terminó, mantener estadísticas y botón de reinicio, y mostrar corazones solo si la última partida fue en vidas
 });
 
 function showTimer() {
@@ -386,34 +475,21 @@ function hideTimer() {
   if (timerDiv) timerDiv.remove();
 }
 function showLives() {
-  let livesDiv = document.getElementById('lives-div');
-  if (!livesDiv) {
-    livesDiv = document.createElement('div');
-    livesDiv.id = 'lives-div';
-    // Más grande y centrado, reemplaza el área de puntuación
-    livesDiv.style = 'font-size:1.6rem;font-weight:bold;margin:16px 0 16px 0;color:#ffd166;text-align:center;transition:all 0.2s;letter-spacing:0.5px;';
-    // Insertar en el mismo lugar que la puntuación
-    scoreDiv.parentNode.insertBefore(livesDiv, scoreDiv);
-  }
   let hearts = '❤️'.repeat(lives) + '🖤'.repeat(3 - lives);
   let label = lang === 'es' ? (lives === 1 ? 'vida' : 'vidas') : (lives === 1 ? 'life' : 'lives');
   livesDiv.textContent = `${lives} ${label}: ${hearts}`;
   livesDiv.style.display = 'block';
-  // Ocultar puntuación si está en modo vidas
-  if (gameMode === 'lives') scoreDiv.style.display = 'none';
 }
 function hideLives() {
-  const livesDiv = document.getElementById('lives-div');
-  if (livesDiv) livesDiv.remove();
-  scoreDiv.style.display = '';
+  livesDiv.style.display = 'none';
 }
 
-// Modificar loadImage para modos
 function loadImage() {
   if (timerInterval) clearInterval(timerInterval);
   hideTimer();
   hideLives();
   if (remainingImages.length === 0 || (gameMode === 'lives' && lives <= 0)) {
+    clueImage.style.display = 'none'; // Oculta la imagen al finalizar la ronda
     gameFinished = true;
     clearMarkers();
     // Mostrar mensaje de condición centrado en resultDiv en modo vidas
@@ -436,18 +512,20 @@ function loadImage() {
     } else {
       let resumen = `<div id='score-details' class='score-details' style='text-align:center;'>`;
       if (lang === 'es') {
-        resumen += `Tu puntuación final es: <strong style='color:#fff;font-size:1.7rem;'>${score}</strong></div>`;
+        resumen += `Tu puntuación final es: <strong style='color:#fff;font-size:1.7rem;'>${score}/100</strong></div>`;
         resumen += `<div class='distance-summary' style='margin:12px auto 0 auto;text-align:center;display:inline-block;font-size:1.1rem;color:#ffd166;'>`;
-        resumen += `Ubicaciones acertadas a menos de 25 metros: <strong style='color:rgba(60,200,60,0.85);'>${distanceStats.under25}</strong></span><br>`;
-        resumen += `Ubicaciones acertadas a menos de 50 metros: <strong style='color:rgba(255,220,50,0.85);'>${distanceStats.under50}</strong></span><br>`;
-        resumen += `Ubicaciones acertadas a menos de 100 metros: <strong style='color:rgba(255,140,0,0.85);'>${distanceStats.under100}</strong></span><br>`;
-        resumen += `Ubicaciones no acertadas: <strong style='color:rgba(220,40,40,0.85);'>${distanceStats.fail}</strong></span>`;
+        resumen += `Ubicaciones acertadas a menos de 25 metros: <strong style='color:rgba(60,200,60,0.85);'>${distanceStats.under25}</strong><br>`;
+        resumen += `Ubicaciones acertadas a menos de 50 metros: <strong style='color:rgba(50,180,255,0.85);'>${distanceStats.under50}</strong><br>`;
+        resumen += `Ubicaciones acertadas a menos de 75 metros: <strong style='color:rgba(255,220,50,0.85);'>${distanceStats.under75}</strong><br>`;
+        resumen += `Ubicaciones acertadas a menos de 100 metros: <strong style='color:rgba(255,140,0,0.85);'>${distanceStats.under100}</strong><br>`;
+        resumen += `Ubicaciones no acertadas: <strong style='color:rgba(220,40,40,0.85);'>${distanceStats.fail}</strong>`;
         resumen += `</div>`;
       } else {
-        resumen += `Your final score is: <strong style='color:#fff;font-size:1.7rem;'>${score}</strong></div>`;
+        resumen += `Your final score is: <strong style='color:#fff;font-size:1.7rem;'>${score}/100</strong></div>`;
         resumen += `<div class='distance-summary' style='margin:12px auto 0 auto;text-align:center;display:inline-block;font-size:1.1rem;color:#ffd166;'>`;
         resumen += `Locations guessed under 25 meters: <strong style='color:rgba(60,200,60,0.85);'>${distanceStats.under25}</strong><br>`;
-        resumen += `Locations guessed under 50 meters: <strong style='color:rgba(255,220,50,0.85);'>${distanceStats.under50}</strong><br>`;
+        resumen += `Locations guessed under 50 meters: <strong style='color:rgba(50,180,255,0.85);'>${distanceStats.under50}</strong><br>`;
+        resumen += `Locations guessed under 75 meters: <strong style='color:rgba(255,220,50,0.85);'>${distanceStats.under75}</strong><br>`;
         resumen += `Locations guessed under 100 meters: <strong style='color:rgba(255,140,0,0.85);'>${distanceStats.under100}</strong><br>`;
         resumen += `Locations not guessed: <strong style='color:rgba(220,40,40,0.85);'>${distanceStats.fail}</strong>`;
         resumen += `</div>`;
@@ -464,7 +542,7 @@ function loadImage() {
     return;
   }
   currentImageIndex = getRandomImageIndexNoRepeat();
-  const { img } = images[currentImageIndex];
+  const { img } = gameImages[currentImageIndex];
   clueImage.removeAttribute('style');
   clueImage.style.display = '';
   clueImage.src = img;
@@ -522,8 +600,10 @@ submitBtn.addEventListener('click', () => {
     guessedCount = 0;
     canGuess = true;
     gameFinished = false;
-    remainingImages = images.map((_, i) => i);
-    distanceStats = { under25: 0, under50: 0, under100: 0, fail: 0 };
+    // Seleccionar 10 imágenes aleatorias para la partida
+    gameImages = getRandomImages(images, 10);
+    remainingImages = gameImages.map((_, i) => i);
+    distanceStats = { under25: 0, under50: 0, under75: 0, under100: 0, fail: 0 };
     lives = 3;
     preGame = false;
     hideTimer();
@@ -545,8 +625,10 @@ submitBtn.addEventListener('click', () => {
     guessedCount = 0;
     canGuess = true;
     gameFinished = false;
-    remainingImages = images.map((_, i) => i);
-    distanceStats = { under25: 0, under50: 0, under100: 0, fail: 0 };
+    // Seleccionar 10 imágenes aleatorias para la partida
+    gameImages = getRandomImages(images, 10);
+    remainingImages = gameImages.map((_, i) => i);
+    distanceStats = { under25: 0, under50: 0, under75: 0, under100: 0, fail: 0 };
     lives = 3;
     hideTimer();
     hideLives();
@@ -575,7 +657,7 @@ submitBtn.addEventListener('click', () => {
   if (!guess && gameMode !== 'timer') return alert(texts[lang].alert);
   if (timerInterval) clearInterval(timerInterval);
   // Convertir coordenadas reales a la escala visual actual
-  const real = images[currentImageIndex];
+  const real = gameImages[currentImageIndex];
   const realX = (real.x / MAP_BASE_WIDTH) * map.offsetWidth;
   const realY = (real.y / MAP_BASE_HEIGHT) * map.offsetHeight;
   placeMarker(realX, realY, true);
@@ -586,6 +668,7 @@ submitBtn.addEventListener('click', () => {
   // Contador de distancias
   if (dist < 25) distanceStats.under25++;
   else if (dist < 50) distanceStats.under50++;
+  else if (dist < 75) distanceStats.under75++;
   else if (dist < 100) distanceStats.under100++;
   else distanceStats.fail++;
 
@@ -654,8 +737,9 @@ function calculateDistance(x1, y1, x2, y2) {
   return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
 }
 function calculatePoints(distance) {
-  if (distance < 25) return 5;
-  if (distance < 50) return 3;
+  if (distance < 25) return 10;
+  if (distance < 50) return 5;
+  if (distance < 75) return 3;
   if (distance < 100) return 1;
   return 0;
 }
