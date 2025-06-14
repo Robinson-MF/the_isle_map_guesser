@@ -1,4 +1,4 @@
-# The Isle Guesser
+# The Isle Map Guesser
 
 Juego web de adivinanza de ubicaciones en mapas, inspirado en GeoGuessr, adaptado para el mapa de The Isle.
 
