@@ -321,6 +321,7 @@ map.addEventListener('click', e => {
   guessCoords = { x, y };
   guess = { x, y };
   clearMarkers(); // Elimina todos los marcadores antes de agregar uno nuevo
+  playSound('pop'); // Sonido al colocar marcador
   drawGuessMarker();
   console.log(`Coordenadas para array: x: ${Math.round(x)}, y: ${Math.round(y)}`);
 });
@@ -439,8 +440,14 @@ function setLanguage(l) {
   modeLabel.textContent = lang === 'es' ? 'Modo' : 'Mode';
   modeSelector.innerHTML = getModeOptions(lang);
   modeSelector.value = gameMode;
-  // Actualizar botón y progreso según fase
+  // Actualizar texto de instrucciones si está visible
   if (preGame) {
+    const startInstruction = document.getElementById('start-instruction');
+    if (startInstruction) {
+      startInstruction.textContent = lang === 'es'
+        ? 'Selecciona el modo de juego que prefieras y luego presiona Comenzar para iniciar.'
+        : 'Select your preferred game mode and then press Start to begin.';
+    }
     submitBtn.textContent = lang === 'es' ? 'Comenzar' : 'Start';
     submitBtn.style.background = '#ffd166';
     submitBtn.style.color = '#222';
@@ -448,7 +455,8 @@ function setLanguage(l) {
     scoreDiv.style.display = gameMode === 'lives' ? 'none' : '';
     hideLives();
     updateProgress();
-    if (gameMode === 'lives') showLives();
+    // No mostrar corazones en preGame
+    // if (gameMode === 'lives') showLives();
     resultDiv.innerHTML = '';
   } else if (submitBtn.textContent === texts['es'].send || submitBtn.textContent === texts['en'].send) {
     submitBtn.textContent = texts[lang].send;
@@ -627,6 +635,13 @@ if (!livesDiv) {
 }
 
 modeSelector.addEventListener('change', function() {
+  // Efecto de sonido para menú desplegable, 20% más despacio
+  if (sounds.button) {
+    sounds.button.pause();
+    sounds.button.currentTime = 0;
+    sounds.button.playbackRate = 0.8;
+    sounds.button.play();
+  }
   // Permitir cambiar el modo si está en preGame o si el juego ya terminó
   if (!preGame && !gameFinished) { return; }
   gameMode = this.value;
@@ -774,9 +789,22 @@ function loadImage() {
     updateProgress(); // Para asegurar posición
     timerInterval = setInterval(() => {
       timeLeft--;
+      if (timeLeft === 3) {
+        playSound('timer');
+        if (sounds.timer) {
+          sounds.timer.volume = 1.0;
+          timerSoundPlaying = true;
+        }
+      }
       showTimer();
       updateProgress();
       if (timeLeft <= 0) {
+        if (sounds.timer && timerSoundPlaying) {
+          sounds.timer.pause();
+          sounds.timer.currentTime = 0;
+          timerSoundPlaying = false;
+        }
+        playSound('fail');
         clearInterval(timerInterval);
         canGuess = false;
         distanceStats.fail++;
@@ -800,9 +828,51 @@ function loadImage() {
   }
 }
 
+// --- SONIDOS ---
+const sounds = {
+  guessed: new Audio('sounds/guessed.mp3'),
+  fail: new Audio('sounds/fail.mp3'),
+  win: new Audio('sounds/win.mp3'),
+  timer: new Audio('sounds/timer-ticks.mp3'),
+  button: new Audio('sounds/button.mp3'),
+  start: new Audio('sounds/game-start.mp3'), // Sonido de inicio de partida
+  pop: new Audio('sounds/pop.mp3'), // Sonido para colocar marcador
+};
+
+// Variable global para controlar el sonido timer-ticks
+let timerSoundPlaying = false;
+
+function playSound(name) {
+  if (sounds[name]) {
+    sounds[name].currentTime = 0;
+    sounds[name].play();
+  }
+}
+
+// Efecto de sonido para todos los botones
+const allButtons = document.querySelectorAll('button');
+allButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    // Si el sonido timer-ticks está activo, cancelarlo
+    if (sounds.timer && timerSoundPlaying) {
+      sounds.timer.pause();
+      sounds.timer.currentTime = 0;
+      timerSoundPlaying = false;
+    }
+    if (sounds.button) {
+      sounds.button.pause();
+      sounds.button.currentTime = 0;
+      sounds.button.volume = 0.3; // 40% más bajo
+      sounds.button.playbackRate = 1.0;
+      sounds.button.play();
+    }
+  });
+});
+
 // Modificar submitBtn para modos
 submitBtn.addEventListener('click', () => {
   if (preGame || gameFinished) {
+    playSound('start'); // Sonido de inicio de partida
     hideStartInstruction(); // Ocultar texto de instrucciones al reiniciar
     // Resetear correctamente todas las variables de estado
     score = 0;
@@ -842,7 +912,11 @@ submitBtn.addEventListener('click', () => {
     canGuess = true;
     return;
   }
-  if (!guess && gameMode !== 'timer') return alert(texts[lang].alert);
+  // PREVENIR enviar si no hay guess en cualquier modo
+  if (!guess) {
+    alert(texts[lang].alert);
+    return;
+  }
   if (timerInterval) clearInterval(timerInterval);
   // Convertir coordenadas reales a la escala visual actual
   const real = gameImages[currentImageIndex];
@@ -860,6 +934,13 @@ submitBtn.addEventListener('click', () => {
   else if (dist < 100) distanceStats.under100++;
   else distanceStats.fail++;
 
+  // --- SONIDOS ---
+  if (points > 0) {
+    playSound('guessed');
+  } else {
+    playSound('fail');
+  }
+
   // --- LÓGICA CORREGIDA PARA MODO VIDAS ---
   if (gameMode === 'lives') {
     if (dist >= 75) {
@@ -867,6 +948,7 @@ submitBtn.addEventListener('click', () => {
     }
     showLives();
     if (lives <= 0) {
+      playSound('fail'); // Sonido de perder
       canGuess = false;
       guessedCount++;
       loadImage();
@@ -881,6 +963,11 @@ submitBtn.addEventListener('click', () => {
     return;
   }
   // --- FIN LÓGICA VIDAS ---
+
+  // Sonido de victoria si es la última ronda
+  if (guessedCount + 1 === totalImages) {
+    playSound('win');
+  }
 
   scoreDiv.textContent = `${texts[lang].score}: ${score}`;
   scoreDiv.innerHTML += `<div id='score-details' class='score-details'>${texts[lang].distance}: <span style='color:#ffd166'>${Math.round(dist)} metros</span><br>${texts[lang].points}: <strong style='color:#fff;font-size:1.7rem;'>${points}</strong></div>`;
@@ -969,8 +1056,6 @@ function drawRealMarker(x, y) {
 function drawLineBaseCoords(x1, y1, x2, y2) {
   // Dibuja una línea SVG entre dos puntos dados en coordenadas base (2048x2048) dentro de #map
   const { px: px1, py: py1 } = getVisualCoordsFromBase(x1, y1);
-  const { px: px2, py: py2 } = getVisualCoordsFromBase(x2, y2);
-  let svg = document.getElementById('guess-line-svg');
   if (svg) svg.remove();
   svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('id', 'guess-line-svg');
