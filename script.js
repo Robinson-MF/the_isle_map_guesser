@@ -66,11 +66,15 @@ function updateProgress() {
   let progress = document.getElementById('progress-text');
   let timerDiv = document.getElementById('timer-div');
   if (!progress) {
-    progress = document.createElement('span'); // Cambiar a span para inline
+    progress = document.createElement('div');
     progress.id = 'progress-text';
-    progress.style = 'font-size:1.1rem;font-weight:bold;margin:8px 0 4px 0;color:#ffd166;text-align:center;display:inline-block;vertical-align:middle;';
-    const clueImg = document.getElementById('clue-image');
-    clueImg.parentNode.insertBefore(progress, clueImg);
+    progress.style = 'color:#ffd166;font-size:1.3rem;font-weight:bold;margin:10px 0;text-align:center;';
+    clueImage.parentNode.insertBefore(progress, clueImage);
+  }
+  if (preGame) {
+    progress.textContent = '';
+  } else {
+    progress.textContent = `(${guessedCount + 1}/${totalImages})`;
   }
   // Crear contenedor inline-flex para alinear contador y temporizador
   let progressTimerWrap = document.getElementById('progress-timer-wrap');
@@ -93,11 +97,9 @@ function updateProgress() {
     }
   }
   if (preGame) {
-    progress.textContent = lang === 'es'
-      ? 'Selecciona el modo de juego que prefieras y luego presiona Comenzar para iniciar.'
-      : 'Choose your preferred game mode and then press Start to begin.';
+    progress.textContent = '';
   } else {
-    progress.textContent = `(${guessedCount}/${totalImages})`;
+    progress.textContent = `(${guessedCount}/${gameMode === 'total' ? images.length : 10})`;
   }
 }
 
@@ -125,6 +127,7 @@ function setPreGameState() {
   submitBtn.disabled = false;
   // No mostrar corazones en preGame
   hideLives();
+  showStartInstruction(); // Mostrar texto de instrucciones
 }
 
 function startGame() {
@@ -133,25 +136,31 @@ function startGame() {
   guessedCount = 0;
   canGuess = true;
   gameFinished = false;
-  // Seleccionar 10 imágenes aleatorias para la partida
-  gameImages = getRandomImages(images, 10);
+  hideStartInstruction(); // Ocultar texto de instrucciones SIEMPRE al iniciar partida
+  // Seleccionar imágenes según el modo
+  if (gameMode === 'total') {
+    gameImages = images.slice(); // Todas las imágenes
+    totalImages = images.length;
+  } else {
+    gameImages = getRandomImages(images, 10);
+    totalImages = 10;
+  }
   remainingImages = gameImages.map((_, i) => i);
   distanceStats = { under25: 0, under50: 0, under75: 0, under100: 0, fail: 0 };
   if (timerInterval) hideTimer();
-  // Mostrar corazones solo si el modo es vidas
   if (gameMode === 'lives') {
     lives = 3;
     showLives();
   } else {
     hideLives();
   }
-  lastGameWasLives = false; // Al iniciar cualquier partida, se resetea
+  lastGameWasLives = false;
   updateProgress();
   clueImage.style.display = '';
   scoreDiv.textContent = `${texts[lang].score}: ${score}`;
   scoreDiv.innerHTML += `<div id='score-details' class='score-details'></div>`;
   modeSelector.disabled = true;
-  submitBtn.style.background = '#21c97a'; // Verde
+  submitBtn.style.background = '#21c97a';
   submitBtn.style.color = '#fff';
   loadImage();
 }
@@ -285,7 +294,8 @@ function setLanguage(l) {
       hideLives();
       let resumen = `<div id='score-details' class='score-details' style='text-align:center;'>`;
       if (lang === 'es') {
-        resumen += `Tu puntuación final es: <strong style='color:#fff;font-size:1.7rem;'>${score}/100</strong></div>`;
+        let maxScore = totalImages * 10;
+        resumen += `Tu puntuación final es: <strong style='color:#fff;font-size:1.7rem;'>${score}/${maxScore}</strong></div>`;
         resumen += `<div class='distance-summary' style='margin:12px auto 0 auto;text-align:center;display:inline-block;font-size:1.1rem;color:#ffd166;'>`;
         resumen += `Ubicaciones acertadas a menos de 25 metros: <strong style='color:rgba(60,200,60,0.85);'>${distanceStats.under25}</strong><br>`;
         resumen += `Ubicaciones acertadas a menos de 50 metros: <strong style='color:rgba(50,180,255,0.85);'>${distanceStats.under50}</strong><br>`;
@@ -294,7 +304,8 @@ function setLanguage(l) {
         resumen += `Ubicaciones no acertadas: <strong style='color:rgba(220,40,40,0.85);'>${distanceStats.fail}</strong>`;
         resumen += `</div>`;
       } else {
-        resumen += `Your final score is: <strong style='color:#fff;font-size:1.7rem;'>${score}/100</strong></div>`;
+        let maxScore = totalImages * 10;
+        resumen += `Your final score is: <strong style='color:#fff;font-size:1.7rem;'>${score}/${maxScore}</strong></div>`;
         resumen += `<div class='distance-summary' style='margin:12px auto 0 auto;text-align:center;display:inline-block;font-size:1.1rem;color:#ffd166;'>`;
         resumen += `Locations guessed under 25 meters: <strong style='color:rgba(60,200,60,0.85);'>${distanceStats.under25}</strong><br>`;
         resumen += `Locations guessed under 50 meters: <strong style='color:rgba(50,180,255,0.85);'>${distanceStats.under50}</strong><br>`;
@@ -395,15 +406,17 @@ modeSelector.className = 'modern-dropdown';
 function getModeOptions(lang) {
   if (lang === 'es') {
     return `
-      <option value="standard" style='color:#ffd166;background:#181b22;'>Estándar</option>
-      <option value="timer" style='color:#ffd166;background:#181b22;'>Contrarreloj</option>
-      <option value="lives" style='color:#ffd166;background:#181b22;'>Intentos limitados</option>
+      <option value="standard">Estándar</option>
+      <option value="timer">Contrarreloj</option>
+      <option value="lives">Intentos limitados</option>
+      <option value="total">Total</option>
     `;
   } else {
     return `
-      <option value="standard" style='color:#ffd166;background:#181b22;'>Standard</option>
-      <option value="timer" style='color:#ffd166;background:#181b22;'>Timed</option>
-      <option value="lives" style='color:#ffd166;background:#181b22;'>Limited lives</option>
+      <option value="standard">Standard</option>
+      <option value="timer">Timer</option>
+      <option value="lives">Limited lives</option>
+      <option value="total">Total</option>
     `;
   }
 }
@@ -512,7 +525,8 @@ function loadImage() {
     } else {
       let resumen = `<div id='score-details' class='score-details' style='text-align:center;'>`;
       if (lang === 'es') {
-        resumen += `Tu puntuación final es: <strong style='color:#fff;font-size:1.7rem;'>${score}/100</strong></div>`;
+        let maxScore = totalImages * 10;
+        resumen += `Tu puntuación final es: <strong style='color:#fff;font-size:1.7rem;'>${score}/${maxScore}</strong></div>`;
         resumen += `<div class='distance-summary' style='margin:12px auto 0 auto;text-align:center;display:inline-block;font-size:1.1rem;color:#ffd166;'>`;
         resumen += `Ubicaciones acertadas a menos de 25 metros: <strong style='color:rgba(60,200,60,0.85);'>${distanceStats.under25}</strong><br>`;
         resumen += `Ubicaciones acertadas a menos de 50 metros: <strong style='color:rgba(50,180,255,0.85);'>${distanceStats.under50}</strong><br>`;
@@ -521,7 +535,8 @@ function loadImage() {
         resumen += `Ubicaciones no acertadas: <strong style='color:rgba(220,40,40,0.85);'>${distanceStats.fail}</strong>`;
         resumen += `</div>`;
       } else {
-        resumen += `Your final score is: <strong style='color:#fff;font-size:1.7rem;'>${score}/100</strong></div>`;
+        let maxScore = totalImages * 10;
+        resumen += `Your final score is: <strong style='color:#fff;font-size:1.7rem;'>${score}/${maxScore}</strong></div>`;
         resumen += `<div class='distance-summary' style='margin:12px auto 0 auto;text-align:center;display:inline-block;font-size:1.1rem;color:#ffd166;'>`;
         resumen += `Locations guessed under 25 meters: <strong style='color:rgba(60,200,60,0.85);'>${distanceStats.under25}</strong><br>`;
         resumen += `Locations guessed under 50 meters: <strong style='color:rgba(50,180,255,0.85);'>${distanceStats.under50}</strong><br>`;
@@ -594,42 +609,25 @@ function loadImage() {
 
 // Modificar submitBtn para modos
 submitBtn.addEventListener('click', () => {
-  if (preGame) {
+  if (preGame || gameFinished) {
+    hideStartInstruction(); // Ocultar texto de instrucciones al reiniciar
     // Resetear correctamente todas las variables de estado
     score = 0;
     guessedCount = 0;
     canGuess = true;
     gameFinished = false;
-    // Seleccionar 10 imágenes aleatorias para la partida
-    gameImages = getRandomImages(images, 10);
+    // Seleccionar imágenes según el modo
+    if (gameMode === 'total') {
+      gameImages = images.slice();
+      totalImages = images.length;
+    } else {
+      gameImages = getRandomImages(images, 10);
+      totalImages = 10;
+    }
     remainingImages = gameImages.map((_, i) => i);
     distanceStats = { under25: 0, under50: 0, under75: 0, under100: 0, fail: 0 };
     lives = 3;
     preGame = false;
-    hideTimer();
-    hideLives();
-    updateProgress();
-    clueImage.style.display = '';
-    scoreDiv.textContent = `${texts[lang].score}: ${score}`;
-    scoreDiv.innerHTML += `<div id='score-details' class='score-details'></div>`;
-    modeSelector.disabled = true;
-    submitBtn.style.background = '#21c97a'; // Verde
-    submitBtn.style.color = '#fff';
-    loadImage();
-    return;
-  }
-  if (gameFinished) {
-    // Si el juego terminó y se presiona Reiniciar, iniciar directamente el juego en el modo seleccionado
-    preGame = false;
-    score = 0;
-    guessedCount = 0;
-    canGuess = true;
-    gameFinished = false;
-    // Seleccionar 10 imágenes aleatorias para la partida
-    gameImages = getRandomImages(images, 10);
-    remainingImages = gameImages.map((_, i) => i);
-    distanceStats = { under25: 0, under50: 0, under75: 0, under100: 0, fail: 0 };
-    lives = 3;
     hideTimer();
     hideLives();
     updateProgress();
@@ -640,12 +638,9 @@ submitBtn.addEventListener('click', () => {
     scoreDiv.style.display = gameMode === 'lives' ? 'none' : '';
     if (gameMode === 'lives') showLives();
     modeSelector.disabled = true;
+    submitBtn.style.background = '#21c97a'; // Verde
+    submitBtn.style.color = '#fff';
     loadImage();
-    // Forzar color amarillo tras cargar la primera imagen si es reinicio
-    if (submitBtn.textContent === (lang === 'es' ? 'Reiniciar' : 'Restart')) {
-      submitBtn.style.background = '#ffd166';
-      submitBtn.style.color = '#222';
-    }
     return;
   }
   if (submitBtn.textContent === texts[lang].next) {
@@ -743,5 +738,32 @@ function calculatePoints(distance) {
   if (distance < 100) return 1;
   return 0;
 }
-loadImage();
-updateOverlaySize();
+
+// Agrega el texto de instrucciones de inicio solo en la fase de preGame
+function showStartInstruction() {
+  let startInstruction = document.getElementById('start-instruction');
+  if (!startInstruction) {
+    startInstruction = document.createElement('div');
+    startInstruction.id = 'start-instruction';
+    startInstruction.style = `
+      font-size: 1.45rem;
+      font-weight: bold;
+      color: #ffd166;
+      text-align: center;
+      margin: 60px 0 60px 0;
+      line-height: 1.3;
+      letter-spacing: 0.5px;
+    `;
+    // Insertar después de desc2-text y antes de la imagen
+    const desc2 = document.getElementById('desc2-text');
+    desc2.parentNode.insertBefore(startInstruction, clueImage);
+  }
+  startInstruction.textContent = lang === 'es'
+    ? 'Selecciona el modo de juego que prefieras y luego presiona Comenzar para iniciar.'
+    : 'Select your preferred game mode and then press Start to begin.';
+  startInstruction.style.display = 'block';
+}
+function hideStartInstruction() {
+  const startInstruction = document.getElementById('start-instruction');
+  if (startInstruction) startInstruction.style.display = 'none';
+}
