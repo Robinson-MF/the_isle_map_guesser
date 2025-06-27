@@ -1,0 +1,241 @@
+html {
+	height: 100vh;
+}
+
+body {
+	margin: 0;
+	font-family: Arial, sans-serif;
+	background: #232a34;
+	color: #fff;
+}
+.main-wrapper {
+	display: flex;
+	flex-direction: row;
+	height: 100vh;
+}
+.sidebar {
+	width: 30%;
+	background: #23272f;
+	padding: 2vw 1.3vw 1.3vw 1.3vw;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	box-shadow: 2px 0 12px #0002;
+	border-radius: 0 16px 16px 0;
+}
+.sidebar h2 {
+	margin-top: 0;
+	font-size: 3.1rem;
+	margin-bottom: 12px;
+	color: #fff;
+}
+.sidebar h2.desc-text {
+	font-size: 2.1rem;
+}
+.sidebar p {
+	margin: 0 0 14px 0;
+	color: #bfc9d1;
+	font-size: 0.81rem;
+}
+.sidebar .desc-text {
+	font-size: 1rem;
+	color: #bfc9d1;
+	margin-bottom: 10px;
+}
+.support-message {
+	font-size: 0.9rem;
+	color: #ffd166;
+	margin-top: 40px;
+	text-align: center;
+}
+.sidebar img {
+	border-radius: 18px;
+	margin: 1.3vw 0 0.65vw 0;
+	box-shadow: 0 4px 32px #0007;
+	border: 3px solid #2e3742;
+	object-fit: contain;
+	display: block;
+	width: 70%;
+}
+.score {
+	font-size: 1.43rem;
+	font-weight: bold;
+	margin: 24px 0 0 0;
+	color: #7fffa6;
+	text-align: center;
+	width: 100%;
+	max-width: 100%;
+	overflow-x: hidden;
+	box-sizing: border-box;
+}
+.score-details {
+	font-size: 0.98rem;
+	margin-top: 10px;
+	color: #ffd166;
+	text-align: center;
+	max-width: 100%;
+	word-break: break-word;
+	white-space: normal;
+	overflow-x: hidden;
+	box-sizing: border-box;
+}
+.distance-summary {
+	display: block !important;
+	margin: 12px auto 0 auto !important;
+	text-align: center !important;
+	font-size: 1.1rem !important;
+	color: #ffd166 !important;
+	max-width: 100%;
+	word-break: break-word;
+	white-space: normal;
+	overflow-x: hidden;
+	box-sizing: border-box;
+}
+.result {
+	font-size: 1.3rem;
+	margin: 14px 0 0 0;
+	color: #ffd166;
+	text-align: left;
+	width: 100%;
+}
+.submit-btn {
+	margin-top: auto;
+	width: 100%;
+	padding: 1.3vh 0;
+	background: #3ec46d;
+	color: #fff;
+	border: none;
+	border-radius: 10px;
+	font-size: 0.88rem;
+	font-weight: bold;
+	cursor: pointer;
+	transition: background 0.2s;
+	box-shadow: 0 2px 8px #0003;
+}
+.submit-btn:active {
+	background: #2e9e54;
+}
+.map-area {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: #2a3140;
+	width: 50%;
+}
+
+#clue-image {
+	width: 75%;
+	object-fit: contain;
+}
+#map {
+	width: 800px;
+	height: 800px;
+	background-image: url('images/map_gateway.png');
+	background-size: 100% 100%;
+	background-repeat: no-repeat;
+	position: relative;
+	border-radius: 18px;
+	box-shadow: 0 2px 24px #0007;
+	border: 3px solid #2e3742;
+	margin: 0 auto;
+	overflow: hidden;
+	/* Para que el contenido no se salga visualmente */
+	touch-action: pan-y pinch-zoom;
+}
+.marker-overlay {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	pointer-events: none;
+	z-index: 10;
+}
+.marker {
+	position: absolute;
+	width: 11px;
+	height: 11px;
+	min-width: 11px;
+	min-height: 11px;
+	max-width: 11px;
+	max-height: 11px;
+	border-radius: 50%;
+	background-color: #ff3b3b;
+	border: 2px solid #fff;
+	box-shadow: 0 2px 8px #0007;
+	transform: translate(-50%, -50%);
+	z-index: 2;
+	pointer-events: none;
+}
+.real-marker {
+	background-color: #3ec46d;
+	border: 3px solid #222;
+}
+.guess-line {
+	position: absolute;
+	pointer-events: none;
+	z-index: 1;
+}
+
+.mode-label {
+	margin-left: 18px;
+	margin-right: 7px;
+	font-size: 1.08rem;
+	font-weight: bold;
+	color: #ffd166;
+	letter-spacing: 0.5px;
+	text-shadow: 0 2px 8px #000b, 0 1px 0 #fff1;
+	vertical-align: middle;
+}
+.modern-dropdown {
+	padding: 9px 28px 9px 14px;
+	border-radius: 10px;
+	border: 2.5px solid #ffd166;
+	background: #181b22;
+	color: #ffd166;
+	font-size: 1.08rem;
+	font-weight: 700;
+	box-shadow: 0 4px 16px 0 #000b, 0 1px 0 #fff1;
+	outline: none;
+	appearance: none;
+	cursor: pointer;
+	transition: border 0.2s, box-shadow 0.2s, background 0.2s;
+	margin-left: 0;
+	margin-right: 0;
+	vertical-align: middle;
+}
+@media (max-width: 900px) {
+	.sidebar {
+		border-radius: 0;
+	}
+
+	.sidebar img {
+		max-width: 88.2vw;
+		max-height: 88.2vw;
+	}
+	.marker-overlay {
+		width: 98vw;
+		height: 98vw;
+		max-width: 100vw;
+		max-height: 100vw;
+	}
+}
+@media (max-width: 600px) {
+	.main-wrapper {
+		flex-direction: column;
+	}
+
+	.map-area,
+	.sidebar {
+		width: 100%;
+	}
+	.score-details,
+	.distance-summary,
+	.score {
+		font-size: 1rem;
+		max-width: 98vw;
+		padding-left: 2vw;
+		padding-right: 2vw;
+	}
+}
